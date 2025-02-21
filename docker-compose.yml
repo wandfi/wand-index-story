@@ -1,0 +1,10 @@
+version: "3"
+name: "zoofi-index"
+services:
+  app:
+    build: .  
+    network_mode: host
+    ports:
+      - "4000:3000"
+    environment:
+      - MYSQL_PORT=33306 
