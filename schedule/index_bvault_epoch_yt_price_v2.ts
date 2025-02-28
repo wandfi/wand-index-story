@@ -63,7 +63,7 @@ async function indexBvaultEpochYTPrice(name: string, ie: index_event) {
       }
       ebesDatas.push({ ebes: item, times });
     }
-    const pc = getPC(undefined, 1);
+    const pc = getPC(undefined);
     const ytPricesItem = (
       await Promise.all(
         ebesDatas.map((item) =>
