@@ -36,7 +36,14 @@ export const story = defineChain({
   },
   rpcUrls: {
     default: { http: ["https://mainnet.storyrpc.io"] },
-    others: { http: ["https://lightnode-json-rpc-mainnet-story.grandvalleys.com", "https://story-mainnet.zenithnode.xyz", "https://story-mainnet-jsonrpc.blockhub.id"] },
+    others: {
+      http: [
+        "https://rpc.ankr.com/story_mainnet",
+        "https://lightnode-json-rpc-mainnet-story.grandvalleys.com",
+        "https://story-mainnet.zenithnode.xyz",
+        "https://story-mainnet-jsonrpc.blockhub.id",
+      ],
+    },
   },
   blockExplorers: {
     default: {
@@ -45,7 +52,7 @@ export const story = defineChain({
     },
   },
   contracts: {
-    multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11", blockCreated: 340998    },
+    multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11", blockCreated: 340998 },
   },
   testnet: false,
   fees: {

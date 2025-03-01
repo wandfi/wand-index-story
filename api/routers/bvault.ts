@@ -71,7 +71,7 @@ r.get("/getYieldiBGT/:bvault", validate([param("bvault").isEthereumAddress()]), 
   const paids = await AppDS.manager.find(tables.event_infrared_vault_RewardPaid, {
     where: { address: ivault, reward: MoreThan(0n), block: LessThan(minBlock) },
     order: { block: "DESC" },
-    take: 2,
+    take: 2,  
   });
 
   const earned = await getPC().readContract({ abi: abiInfraredVault, address: ivault, functionName: "earned", args: [bvault, iBGT], blockNumber: minBlock });

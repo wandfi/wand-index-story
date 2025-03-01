@@ -11,13 +11,16 @@ import { getIndexEventParams } from "./utils";
 const subAbi = abiBVault.filter((item) => item.name == "Y" || item.name == "yTokenUserBalance");
 async function getBvaultEpochYTPrice(pc: PublicClient, vault: Address, epochId: bigint, block: bigint) {
   const [Y, vaultYTokenBalance] = await Promise.all([
-    pc.readContract({ abi: subAbi, address: vault, functionName: "Y", blockNumber: block }).catch((e: ContractFunctionExecutionError) => {
-      if ((e.message || '').includes("reverted")) {
-        return 0n;
-      } else {
-        throw e;
-      }
-    }),
+    pc
+      .readContract({ abi: subAbi, address: vault, functionName: "Y", blockNumber: block })
+      .catch((e: ContractFunctionExecutionError) => {
+        if ((e.message || "").includes("reverted")) {
+          return 0n;
+        } else {
+          throw e;
+        }
+      })
+      .catch((e) => e.message.includes("")),
     pc.readContract({ abi: subAbi, address: vault, functionName: "yTokenUserBalance", args: [epochId, vault], blockNumber: block }),
   ]);
   return vaultYTokenBalance > 0n ? (Y * DECIMAL) / vaultYTokenBalance : 0n;
@@ -63,7 +66,7 @@ async function indexBvaultEpochYTPrice(name: string, ie: index_event) {
       }
       ebesDatas.push({ ebes: item, times });
     }
-    const pc = getPC(undefined);
+    const pc = getPC(undefined, 1);
     const ytPricesItem = (
       await Promise.all(
         ebesDatas.map((item) =>
