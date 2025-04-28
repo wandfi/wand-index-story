@@ -10,7 +10,7 @@ import { getPC } from "@/lib/publicClient";
 import abiBVault from "@/configs/abiBVault";
 
 async function indexBvaultEpochPtSynthetic(name: string, ie: index_event, isV2?: boolean) {
-  const params = await getIndexEventParams(undefined,name, 12000n, ie.start);
+  const params = await getIndexEventParams(undefined, name, 12000n, ie.start);
   if (!params) return;
   const indexDepositBlock = await getIndexConfig(indexEventName(ie), 1n);
   const indexTimeBlock = await getIndexConfig("index_block_time", 1n);
@@ -50,7 +50,7 @@ async function indexBvaultEpochPtSynthetic(name: string, ie: index_event, isV2?:
     };
 
     let sum = (await AppDS.manager.findOne(tables.index_bvault_epoch_pt_syntheticV2, { where: { bvault: ie.address, epochId: BigInt(epochId) } }))?.value || 0n;
-    if (params.start <= epoch.block && epoch.block <= params.end) {
+    if (sum == 0n) {
       sum = await getStartPTSynthetic();
     }
     for (const item of groups[epochId]) {
