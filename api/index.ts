@@ -11,7 +11,7 @@ export async function apiServer() {
   const app = express();
   app.use(
     cors({
-      origin: true,
+      origin: "*",
       credentials: true,
     })
   );
