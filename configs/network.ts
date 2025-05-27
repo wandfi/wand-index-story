@@ -38,10 +38,8 @@ export const story = defineChain({
     default: { http: ["https://mainnet.storyrpc.io"] },
     others: {
       http: [
-        "https://rpc.ankr.com/story_mainnet",
-        "https://lightnode-json-rpc-mainnet-story.grandvalleys.com",
-        "https://story-mainnet.zenithnode.xyz",
-        "https://story-mainnet-jsonrpc.blockhub.id",
+        'https://story-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX',
+        'https://rpc.ankr.com/story_mainnet',
       ],
     },
   },
