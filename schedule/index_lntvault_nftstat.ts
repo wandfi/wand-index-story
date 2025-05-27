@@ -58,7 +58,7 @@ async function indexLntVaultNftstatBy(name: string, ie: index_event) {
     }));
     await AppDS.transaction(async (ma) => {
       await ma.upsert(tables.index_lntvault_nftstat, datas, ["vault", "tokenId"]);
-      await upIndexConfig(name, params.end);
+      await upIndexConfig(name, params.end, ma);
     });
   }
 }

@@ -86,7 +86,7 @@ async function indexBvaultEpochYTPrice(name: string, ie: index_event) {
     console.info("ytPricesItem", ytPricesItem);
     await AppDS.transaction(async (ma) => {
       await ma.upsert(tables.index_bvault_epoch_yt_price, ytPricesItem, ["bvault", "epochId", "time"]);
-      await upIndexConfig(name, params.end);
+      await upIndexConfig(name, params.end, ma);
     });
   }
 }

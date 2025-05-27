@@ -81,7 +81,7 @@ async function indexLntVaultEpochYTPrice(name: string, ie: index_event) {
     console.info("ytPricesItem", ytPricesItem);
     await AppDS.transaction(async (ma) => {
       await ma.upsert(tables.index_lntvault_epoch_yt_price, ytPricesItem, ["vault", "epochId", "time"]);
-      await upIndexConfig(name, params.end);
+      await upIndexConfig(name, params.end, ma);
     });
   }
 }

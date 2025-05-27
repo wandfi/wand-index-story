@@ -27,7 +27,7 @@ async function indexErc721OwnerBy(name: string, ie: index_event) {
     const items = trans.map((item) => ({ token: item.address, tokenId: item.tokenId, owner: item.to }));
     await AppDS.transaction(async (ma) => {
       await ma.upsert(tables.index_erc721_owner, items, ["token", "tokenId"]);
-      await upIndexConfig(name, params.end);
+      await upIndexConfig(name, params.end, ma);
     });
   }
 }
