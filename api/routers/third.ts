@@ -1,5 +1,6 @@
 import { AppDS, tables } from "@/db";
 import express from "express";
+import type { Request, Response } from "express";
 import { body, param } from "express-validator";
 import { isAddress, type Address } from "viem";
 import { CommonResponse } from "../common";
@@ -9,6 +10,7 @@ import { indexEventName } from "@/schedule/index_events";
 import { getPC } from "@/lib/publicClient";
 import abiBVault from "@/configs/abiBVault";
 import _ from "lodash";
+import { MoreThanOrEqual } from "typeorm";
 const r = express.Router();
 export default r;
 
@@ -66,10 +68,8 @@ r.get("/checkyt/:account", validate([param("account").isEthereumAddress()]), asy
   res.status(200).json(data);
 });
 
-r.get(`/points/:bvault/:block`, validate([param("bvault").isEthereumAddress(), param("block").isNumeric()]), async (req, res) => {
+async function queryPointsByBlock(req: Request, res: Response, bvault: Address, blockNumber: bigint) {
   try {
-    const bvault = req.params["bvault"] as Address;
-    const blockNumber = BigInt(req.params["block"]);
     const ec = await AppDS.manager.findOne(tables.index_event, { where: { address: bvault, table: "event_bvault_swap" } });
     if (!ec || blockNumber <= ec.start) {
       return res.status(404).send();
@@ -119,5 +119,27 @@ r.get(`/points/:bvault/:block`, validate([param("bvault").isEthereumAddress(), p
   } catch (error) {
     console.error("ir_points_program:", req.params["bvault"], req.params["block"], error);
     return res.status(500).json({ code: 120, message: "Please retry a wait moment" });
+  }
+}
+
+r.get(`/points/:bvault/:block`, validate([param("bvault").isEthereumAddress(), param("block").isNumeric()]), async (req, res) => {
+  const bvault = req.params["bvault"] as Address;
+  const blockNumber = BigInt(req.params["block"]);
+  await queryPointsByBlock(req, res, bvault, blockNumber);
+});
+
+r.get(`/points/:bvault/timestamp/:timestamp`, validate([param("bvault").isEthereumAddress(), param("timestamp").isTime({ mode: "withSeconds" })]), async (req, res) => {
+  try {
+    
+    const bvault = req.params["bvault"] as Address;
+    const timestamp = parseInt(req.params["timestamp"]);
+    const indexBlockNumber = await getIndexConfig("index_block_time");
+    const blockTime = await getBlockTime(indexBlockNumber);
+    if (blockTime < timestamp) return res.status(500).json({ code: 120, message: "Please retry a wait moment" });
+    const item = await AppDS.manager.findOne(tables.index_block_time, { where: { time: MoreThanOrEqual(timestamp) } })
+    if(!item) return res.status(500).json({ code: 120, message: "Please retry a wait moment" });
+    await queryPointsByBlock(req, res, bvault, item.block);
+  } catch (error) {
+    return res.status(500).json({ code: 120, message: "Please retry a wait moment" })
   }
 });
