@@ -128,7 +128,7 @@ r.get(`/points/:bvault/:block`, validate([param("bvault").isEthereumAddress(), p
   await queryPointsByBlock(req, res, bvault, blockNumber);
 });
 
-r.get(`/points/:bvault/timestamp/:timestamp`, validate([param("bvault").isEthereumAddress(), param("timestamp").isTime({ mode: "withSeconds" })]), async (req, res) => {
+r.get(`/points/:bvault/timestamp/:timestamp`, validate([param("bvault").isEthereumAddress(), param("timestamp").isNumeric()]), async (req, res) => {
   try {
     
     const bvault = req.params["bvault"] as Address;
