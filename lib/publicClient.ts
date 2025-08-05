@@ -4,17 +4,17 @@ import { createPublicClient, http, type Chain, type PublicClient } from "viem";
 
 const pcMaps: { [id: number]: { pcs: PublicClient[]; current: number } } = {};
 
-function getRpcurls(chain: Chain){
-  const keys = _.keys(chain.rpcUrls)
-  return _.flatten(keys.map(item => chain.rpcUrls[item].http))
+function getRpcurls(chain: Chain) {
+  const keys = _.keys(chain.rpcUrls);
+  return _.flatten(keys.map((item) => chain.rpcUrls[item].http));
 }
 
 function createPCS(chainId: number) {
-  const chain = SUPPORT_CHAINS.find((c) => c.id == chainId)!
-  if (!chain) throw `No Chain for chianId:${chainId}`
-  const rpcls = getRpcurls(chain) 
-  console.info('chainid:',chainId, 'rpcs:', rpcls)
-  if(rpcls.length == 0) throw `No Chain rpc for chianId:${chainId}`
+  const chain = SUPPORT_CHAINS.find((c) => c.id == chainId)!;
+  if (!chain) throw `No Chain for chianId:${chainId}`;
+  const rpcls = getRpcurls(chain);
+  console.info("chainid:", chainId, "rpcs:", rpcls);
+  if (rpcls.length == 0) throw `No Chain rpc for chianId:${chainId}`;
   const pcs = rpcls.map((url) => {
     const pc = createPublicClient({
       batch: { multicall: multicallBatchConfig },
@@ -39,7 +39,7 @@ function createPCS(chainId: number) {
   });
   return pcs;
 }
-export function getPC(chainId: number = getCurrentChainId(), index?: number) {
+export function getPC(chainId: number, index?: number) {
   if (!pcMaps[chainId]) {
     pcMaps[chainId] = { pcs: createPCS(chainId), current: 0 };
   }

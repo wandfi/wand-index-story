@@ -8,6 +8,7 @@ import { In, LessThanOrEqual, MoreThanOrEqual, Raw } from "typeorm";
 import type { Address, ContractFunctionExecutionError, PublicClient } from "viem";
 import { indexEventName } from "./index_events";
 import { getIndexEventParams } from "./utils";
+import { story } from "@/configs/network";
 const subAbi = abiBVault.filter((item) => item.name == "Y" || item.name == "yTokenUserBalance");
 async function getBvaultEpochYTPrice(pc: PublicClient, vault: Address, epochId: bigint, block: bigint) {
   const [Y, vaultYTokenBalance] = await Promise.all([
@@ -24,7 +25,7 @@ async function getBvaultEpochYTPrice(pc: PublicClient, vault: Address, epochId: 
 }
 
 async function indexBvaultEpochYTPrice(name: string, ie: index_event) {
-  const params = await getIndexEventParams(undefined,name, 12000n, ie.start);
+  const params = await getIndexEventParams(story.id,name, 12000n, ie.start);
   if (!params) return;
   const eventblock = await getIndexConfig(indexEventName(ie), 1n);
   const indexBlockTimeBlock = await getIndexConfig("index_block_time", 1n);
@@ -63,7 +64,7 @@ async function indexBvaultEpochYTPrice(name: string, ie: index_event) {
       }
       ebesDatas.push({ ebes: item, times });
     }
-    const pc = getPC(undefined, 1);
+    const pc = getPC(story.id, 1);
     const ytPricesItem = (
       await Promise.all(
         ebesDatas.map((item) =>

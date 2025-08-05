@@ -27,7 +27,7 @@ async function indexLntVaultEpochYTPrice(name: string, ie: index_event) {
   const indexBlockTimeBlock = await getIndexConfig("index_block_time2", 1n);
   params.end = bigintMin([eventblock, params.end, indexBlockTimeBlock]);
   if (params.start >= params.end) return;
-  console.info(name, params);
+  // console.info(name, params);
   const [startIBT, endIBT] = await AppDS.manager.find(tables.index_block_time2, { where: { block: In([params.start, params.end]) } });
   const startTime = BigInt(startIBT.time);
   const endTime = BigInt(endIBT.time);

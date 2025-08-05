@@ -1,4 +1,8 @@
 export const DECIMAL = 10n ** 18n;
+
+export type UnwrapPromise<T> = T extends Promise<infer S> ? S : T;
+export type UnPromise<T> = T extends () => Promise<infer U> ? U : UnwrapPromise<T>;
+
 export function getEnv(value: string, defaultValue: any = ""): string {
   return process.env[value] || `${defaultValue}`;
 }
@@ -44,7 +48,7 @@ export function bigintMin(nums: bigint[]) {
   });
   return min;
 }
-export function bigintMax(nums: bigint[]){
+export function bigintMax(nums: bigint[]) {
   if (nums.length == 0) return 0n;
   let max = nums[0];
   nums.forEach((num) => {
@@ -57,7 +61,6 @@ export function toMap<T, K extends string | number | symbol>(list: T[], by: keyo
   const mBy = (item: T) => (typeof by == "function" ? by(item) : item[by]);
   return list.reduce<{ [k: string]: T }>((map, item) => ({ ...map, [`${mBy(item)}`]: item }), {});
 }
-
 
 export function createRunWithPool() {
   const poolBusy: {
@@ -84,4 +87,21 @@ export function createRunWithPool() {
     }
   }
   return runWithPool;
+}
+
+export function toUtc0000UnixTime(time: number) {
+  const date = new Date(time * 1000);
+  date.setUTCHours(0, 0, 0, 0);
+  return Math.round(date.getTime() / 1000);
+}
+
+
+export async function promiseAll<ObjTask extends { [k: string]: Promise<any> }>(objTask: ObjTask) {
+  const keys: (keyof ObjTask)[] = Object.keys(objTask);
+  const datas = await Promise.all(keys.map((item) => objTask[item]));
+  const data: any = {} as any;
+  keys.forEach((key, i) => {
+    data[key] = datas[i] as any;
+  });
+  return data as { [k in keyof ObjTask]: UnwrapPromise<ObjTask[k]> };
 }

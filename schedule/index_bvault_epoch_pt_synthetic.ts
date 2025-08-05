@@ -8,9 +8,10 @@ import { indexEventName } from "./index_events";
 import { getIndexEventParams } from "./utils";
 import { getPC } from "@/lib/publicClient";
 import abiBVault from "@/configs/abiBVault";
+import { story } from "@/configs/network";
 
 async function indexBvaultEpochPtSynthetic(name: string, ie: index_event, isV2?: boolean) {
-  const params = await getIndexEventParams(undefined, name, 12000n, ie.start);
+  const params = await getIndexEventParams(story.id, name, 12000n, ie.start);
   if (!params) return;
   const indexDepositBlock = await getIndexConfig(indexEventName(ie), 1n);
   const indexTimeBlock = await getIndexConfig("index_block_time", 1n);
@@ -43,7 +44,7 @@ async function indexBvaultEpochPtSynthetic(name: string, ie: index_event, isV2?:
     }))!;
     console.info("epoch:", epoch);
     const getStartPTSynthetic = async () => {
-      const pc = getPC(undefined, 1);
+      const pc = getPC(story.id, 1);
       const pToken = await pc.readContract({ abi: abiBVault, address: epoch.address, functionName: "pToken" });
       const startPTokenAmount = await pc.readContract({ abi: erc20Abi, address: pToken, functionName: "totalSupply", blockNumber: epoch.block });
       return startPTokenAmount * epoch.duration;

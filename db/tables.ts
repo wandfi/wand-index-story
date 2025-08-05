@@ -7,7 +7,7 @@ export const bnTrans: ValueTransformer = {
 };
 export const timeNumTrans: ValueTransformer = {
   to: (value: number) => new Date(value * 1000).toLocaleString("zh"),
-  from: (value: string) => new Date(value).getTime() / 1000,
+  from: (value: string) => Math.floor(new Date(value).getTime() / 1000),
 };
 
 // ************************************************** index_config *****************************************************
@@ -67,6 +67,22 @@ export class index_block_time2 {
   @Column({ type: "timestamp", transformer: timeNumTrans })
   declare time: number;
 }
+
+@Entity()
+@Index(["chain", "block"], { unique: true })
+export class index_block_time_v2 {
+  @PrimaryGeneratedColumn()
+  declare id: number;
+
+  @Column({ type: "bigint" })
+  declare chain: number;
+
+  @Column({ type: "decimal", precision: 20, transformer: bnTrans })
+  declare block: bigint;
+
+  @Column({ type: "timestamp", transformer: timeNumTrans })
+  declare time: number;
+}
 class event_base {
   @PrimaryGeneratedColumn()
   declare id: number;
@@ -77,6 +93,70 @@ class event_base {
   @Column({ type: "varchar", length: 66 })
   declare tx: Address;
 }
+class event_baseV2 extends event_base {
+  @Column({ type: "bigint" })
+  declare chain: number;
+}
+// ************************************************* eventv2 ***********************************************************************
+@Entity("eventV2_bvault2_LiquidityAdded") //     event LiquidityAdded(address indexed user, address indexed BT, uint256 amountBT, uint256 amountVPT,uint256 amountShares, uint256 amountPT, uint256 amountYT);
+class eventV2_bvault2_LiquidityAdded extends event_baseV2 {
+  @Column({ type: "varchar", length: 42 })
+  declare user: Address;
+  @Column({ type: "varchar", length: 42 })
+  declare BT: Address;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare amountBT: bigint;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare amountVPT: bigint;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare amountShares: bigint;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare amountPT: bigint;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare amountYT: bigint;
+}
+@Entity("eventV2_bvault2_SwapBTforPT") //    event SwapBTforPT(address indexed user, address indexed BT, address indexed PT, uint256 amountBT, uint256 amountPT);
+class eventV2_bvault2_SwapBTforPT extends event_baseV2 {
+  @Column({ type: "varchar", length: 42 })
+  declare user: Address;
+  @Column({ type: "varchar", length: 42 })
+  declare BT: Address;
+  @Column({ type: "varchar", length: 42 })
+  declare PT: Address;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare amountBT: bigint;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare amountPT: bigint;
+}
+@Entity("eventV2_bvault2_SwapBTforYT") // event SwapBTforYT(address indexed user, address indexed BT, address indexed YT, uint256 maxAmountBT, uint256 amountYT, uint256 amountBTUsed);
+class eventV2_bvault2_SwapBTforYT extends event_baseV2 {
+  @Column({ type: "varchar", length: 42 })
+  declare user: Address;
+  @Column({ type: "varchar", length: 42 })
+  declare BT: Address;
+  @Column({ type: "varchar", length: 42 })
+  declare YT: Address;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare maxAmountBT: bigint;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare amountYT: bigint;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare amountBTUsed: bigint;
+}
+@Entity("eventV2_bvault2_MintPTandYT") // event MintPTandYT(address indexed user, address indexed BT, address PT, address YT, uint256 amount);
+class eventV2_bvault2_MintPTandYT extends event_baseV2 {
+  @Column({ type: "varchar", length: 42 })
+  declare user: Address;
+  @Column({ type: "varchar", length: 42 })
+  declare BT: Address;
+  @Column({ type: "varchar", length: 42 })
+  declare PT: Address;
+  @Column({ type: "varchar", length: 42 })
+  declare YT: Address;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare amount: bigint;
+}
+
 // ************************************************** event_bvault_epoch_started *****************************************************
 // "event EpochStarted(uint256 epochId,uint256 startTime,uint256 duration,address redeemPool)"
 @Entity()
@@ -286,7 +366,6 @@ export class users {
   declare role: string;
 }
 
-
 // ************************************************** infered vaults evetns **************************************
 
 // event RewardPaid(address indexed user, address indexed rewardsToken, uint256 reward)
@@ -299,12 +378,28 @@ export class event_infrared_vault_RewardPaid extends event_base {
   @Column({ type: "decimal", precision: 20, transformer: bnTrans })
   declare reward: bigint;
 }
+// ************************************************** infered vaults evetns **************************************
+
+// event RewardPaid(address indexed user, address indexed rewardsToken, uint256 reward)
+@Entity("bvault_points_data")
+@Index(["vault", "time"], { unique: true })
+export class bvault_points_data {
+  @PrimaryGeneratedColumn()
+  declare id: number;
+  @Column({ type: "varchar", length: 42 })
+  declare vault: Address;
+  @Column({ type: "timestamp", transformer: timeNumTrans })
+  declare time: number;
+  @Column({ type: "json" })
+  declare data: { address: Address; balance: string }[];
+}
 
 // ************************************************** tables *****************************************************
 export const tables = {
   index_config,
   index_event,
   index_block_time,
+  index_block_time_v2,
   index_bvault_epoch_pt_syntheticV2,
   users,
   index_bvault_epoch_yt_price,
@@ -325,4 +420,10 @@ export const tables = {
   index_lntvault_nftstat,
 
   event_infrared_vault_RewardPaid,
+
+  eventV2_bvault2_LiquidityAdded,
+  eventV2_bvault2_SwapBTforPT,
+  eventV2_bvault2_SwapBTforYT,
+  eventV2_bvault2_MintPTandYT,
+  bvault_points_data,
 };

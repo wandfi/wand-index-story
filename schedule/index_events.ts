@@ -1,12 +1,12 @@
+import { InfraredVaultMapBVault } from "@/configs/infrared";
+import { story } from "@/configs/network";
 import { AppDS, index_event, tables } from "@/db";
 import { upIndexConfig } from "@/db/help";
 import { getPC } from "@/lib/publicClient";
 import { loopRun, toMap } from "@/lib/utils";
+import _ from "lodash";
 import { isAddressEqual, parseAbiItem, parseEventLogs, type AbiEvent } from "viem";
 import { getIndexEventParams } from "./utils";
-import _ from "lodash";
-import { sepolia } from "viem/chains";
-import { InfraredVaultMapBVault } from "@/configs/infrared";
 
 export function indexEventName(ec: index_event) {
   return `event_${ec.table}_current_${ec.address}`;
@@ -14,15 +14,14 @@ export function indexEventName(ec: index_event) {
 async function fetchEvent(ec: index_event) {
   // console.info('ec:', ec)
   const isLnt = ec.table.includes("lntvault") || ec.table === "event_erc721_transfer";
-  const chainId = isLnt ? sepolia.id : undefined;
   const indexCurrentName = indexEventName(ec);
-  const params = await getIndexEventParams(chainId, indexCurrentName, 10000n, ec.start);
+  const params = await getIndexEventParams(story.id, indexCurrentName, 10000n, ec.start);
   const table = tables[ec.table];
   if (!params || !table) return;
   const { start, end } = params;
   const eventAbi: AbiEvent = parseAbiItem(ec.event) as any;
   console.info(indexCurrentName, start, end);
-  const pc = getPC(chainId);
+  const pc = getPC(story.id);
   const logs = await pc.getLogs({
     address: ec.address,
     event: eventAbi,

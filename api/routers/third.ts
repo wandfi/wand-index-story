@@ -11,6 +11,7 @@ import { getPC } from "@/lib/publicClient";
 import abiBVault from "@/configs/abiBVault";
 import _ from "lodash";
 import { MoreThanOrEqual } from "typeorm";
+import { story } from "@/configs/network";
 const r = express.Router();
 export default r;
 
@@ -45,7 +46,7 @@ const getBlockTime = async (block: bigint) => {
   if (bt) {
     return bt.time;
   }
-  const b = await getPC().getBlock({ blockNumber: block });
+  const b = await getPC(story.id).getBlock({ blockNumber: block });
   return parseInt(b.timestamp.toString());
 };
 
@@ -80,7 +81,7 @@ async function queryPointsByBlock(req: Request, res: Response, bvault: Address, 
       return res.status(500).json({ code: 120, message: "Need wait server index block" });
     }
     const blockTime = await getBlockTime(blockNumber);
-    const pc = getPC(undefined, 1);
+    const pc = getPC(story.id, 1);
     const epochCount = await pc.readContract({ abi: abiBVault, address: bvault, functionName: "epochIdCount", blockNumber });
     if (epochCount == 0n) {
       return res.status(400).json({ code: 120, message: "Vault not start" });

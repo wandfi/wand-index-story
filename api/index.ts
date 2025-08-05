@@ -4,6 +4,7 @@ import express from "express";
 
 import { CONFIGS } from "@/configs";
 import routes from "./routers";
+import v2 from "./v2";
 import { CommonResponse } from "./common";
 
 export async function apiServer() {
@@ -21,6 +22,7 @@ export async function apiServer() {
     CommonResponse.success().send(res);
   });
   app.use("/api", routes);
+  app.use("/api/v2", v2);
   app.use((err: any, _req: any, _res: any, _next: any) => {
     console.error(`Server stack: ${err.stack} \n msg: ${err.message}`);
   });
@@ -29,5 +31,5 @@ export async function apiServer() {
 }
 
 export async function startApi() {
-    await apiServer()
+  await apiServer();
 }

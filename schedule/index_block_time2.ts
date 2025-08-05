@@ -12,7 +12,7 @@ export default function indexBlockTime2() {
     name,
     async () => {
       const params = await getIndexEventParams(sepolia.id,name, 10000n, 0n);
-      console.info(name, params);
+      // console.info(name, params);
       if (!params||params.start == 1n) return;
       const pc = getPC(sepolia.id);
       const blockNums = _.range(parseInt(params.start.toString()), parseInt(params.end.toString()) + 1).map((num) => BigInt(num));
