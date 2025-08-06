@@ -49,9 +49,10 @@ export class index_block_time {
   declare id: number;
 
   @Index({ unique: true })
-  @Column({ type: "decimal", precision: 20, transformer: bnTrans })
+  @Column({ type: "bigint", transformer: bnTrans })
   declare block: bigint;
 
+  @Index("IDX_index_block_time_time", { unique: false })
   @Column({ type: "timestamp", transformer: timeNumTrans })
   declare time: number;
 }
@@ -77,9 +78,10 @@ export class index_block_time_v2 {
   @Column({ type: "bigint" })
   declare chain: number;
 
-  @Column({ type: "decimal", precision: 20, transformer: bnTrans })
+  @Column({ type: "bigint", transformer: bnTrans })
   declare block: bigint;
 
+  @Index("IDX_index_block_time_v2_time", { unique: false })
   @Column({ type: "timestamp", transformer: timeNumTrans })
   declare time: number;
 }
