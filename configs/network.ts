@@ -36,7 +36,7 @@ export const story = defineChain({
     symbol: "IP",
   },
   rpcUrls: {
-    default: { http: ["https://mainnet.storyrpc.io"] },
+    default: { http: ["https://story-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX"] },
     others: {
       http: ["https://story-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX"],
     },

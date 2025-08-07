@@ -76,7 +76,7 @@ async function getUserPoint(pc: PublicClient, vc: Bvault2Config, user: Address, 
     const epoch = await pc.readContract({ abi: abiBVault2, address: vc.vault, functionName: "epochInfoById", args: [data.epochCount], blockNumber });
     const ytBalance = await pc.readContract({ abi: erc20Abi, address: epoch.YT, functionName: "balanceOf", args: [user], blockNumber });
     if (ytBalance > 0n) {
-      point += await pc.readContract({ abi: abiBVault2, address: vc.vault, functionName: "quoteExactYTforBT", args: [ytBalance] });
+      point += await pc.readContract({ abi: abiBVault2, address: vc.vault, functionName: "quoteExactYTforBT", args: [ytBalance], blockNumber });
     }
   }
   return { address: user, balance: formatUnits(point, vc.decimals) };

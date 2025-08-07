@@ -9,6 +9,10 @@ export const timeNumTrans: ValueTransformer = {
   to: (value: number) => new Date(value * 1000).toLocaleString("zh"),
   from: (value: string) => Math.floor(new Date(value).getTime() / 1000),
 };
+export const timeNumTrans2: ValueTransformer = {
+  to: (value: number) => new Date(value * 1000).toUTCString(),
+  from: (value: string) => Math.floor(new Date(value).getTime() / 1000),
+};
 
 // ************************************************** index_config *****************************************************
 @Entity()
@@ -395,6 +399,25 @@ export class bvault_points_data {
   @Column({ type: "json" })
   declare data: { address: Address; balance: string }[];
 }
+@Entity("bvault2_charts")
+@Index(["vault", "time"], { unique: true })
+export class bvault2_charts {
+  @PrimaryGeneratedColumn()
+  declare id: number;
+  @Column({ type: "varchar", length: 42 })
+  declare vault: Address;
+  @Column({ type: "timestamp", transformer: timeNumTrans2 })
+  declare time: number;
+
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans})
+  declare ytRoi: bigint;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans})
+  declare ytPrice: bigint;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans})
+  declare ptApy: bigint;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans})
+  declare ptPrice: bigint;
+}
 
 // ************************************************** tables *****************************************************
 export const tables = {
@@ -428,4 +451,5 @@ export const tables = {
   eventV2_bvault2_SwapBTforYT,
   eventV2_bvault2_MintPTandYT,
   bvault_points_data,
+  bvault2_charts,
 };

@@ -1,3 +1,5 @@
+import { formatUnits, parseUnits } from "viem";
+
 export const DECIMAL = 10n ** 18n;
 
 export type UnwrapPromise<T> = T extends Promise<infer S> ? S : T;
@@ -104,4 +106,20 @@ export async function promiseAll<ObjTask extends { [k: string]: Promise<any> }>(
     data[key] = datas[i] as any;
   });
   return data as { [k in keyof ObjTask]: UnwrapPromise<ObjTask[k]> };
+}
+
+
+export function bnToNumber(bn: bigint, decimal: number = 18) {
+  return parseFloat(formatUnits(bn, decimal));
+}
+
+export function numToBn(num: number, decimal: number = 18) {
+  return parseUnits(num.toLocaleString("en", { useGrouping: false, maximumFractionDigits: decimal }), decimal);
+}
+
+export function bnLog(bn: bigint, decimal: number = 18) {
+  return numToBn(Math.log(bnToNumber(bn, decimal)), decimal);
+}
+export function bnPow(bn: bigint, p: number, decimal: number = 18) {
+  return numToBn(Math.pow(bnToNumber(bn, decimal), p), decimal);
 }

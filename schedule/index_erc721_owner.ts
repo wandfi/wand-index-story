@@ -2,11 +2,11 @@ import { AppDS, index_event, tables } from "@/db";
 import { getIndexConfig, upIndexConfig } from "@/db/help";
 import { bigintMin, loopRun, toMap } from "@/lib/utils";
 import _ from "lodash";
-import { And, LessThanOrEqual, MoreThanOrEqual, Raw } from "typeorm";
+import { Raw } from "typeorm";
 import type { Address } from "viem";
+import { sepolia } from "viem/chains";
 import { indexEventName } from "./index_events";
 import { getIndexEventParams } from "./utils";
-import { sepolia } from "viem/chains";
 
 async function indexErc721OwnerBy(name: string, ie: index_event) {
   const params = await getIndexEventParams(sepolia.id,name, 12000n, ie.start);

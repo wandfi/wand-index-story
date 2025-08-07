@@ -4,7 +4,7 @@ import { body, param } from "express-validator";
 import { isAddressEqual, type Address } from "viem";
 import { CommonResponse } from "../common";
 import { validate } from "../validator";
-import { In, LessThan, LessThanOrEqual, MoreThan } from "typeorm";
+import { Between, In, LessThan, LessThanOrEqual, MoreThan } from "typeorm";
 import { bigintMin, toMap } from "@/lib/utils";
 import _ from "lodash";
 import { InfraredVaultMapBVault } from "@/configs/infrared";
@@ -12,7 +12,8 @@ import { getIndexConfig } from "@/db/help";
 import { indexEventName } from "@/schedule/index_events";
 import { getPC } from "@/lib/publicClient";
 import abiInfraredVault from "@/configs/abiInfraredVault";
-import { iBGT } from "@/configs/network";
+import { iBGT, story } from "@/configs/network";
+import { BVAULT2_CONFIGS } from "@/configs/bvaults2";
 const r = express.Router();
 export default r;
 
@@ -74,7 +75,7 @@ r.get("/getYieldiBGT/:bvault", validate([param("bvault").isEthereumAddress()]), 
     take: 2,  
   });
 
-  const earned = await getPC().readContract({ abi: abiInfraredVault, address: ivault, functionName: "earned", args: [bvault, iBGT], blockNumber: minBlock });
+  const earned = await getPC(story.id).readContract({ abi: abiInfraredVault, address: ivault, functionName: "earned", args: [bvault, iBGT], blockNumber: minBlock });
   let startBlock = firstDeposit.block;
   let endBlock = minBlock;
   let ibgtYield = earned;
@@ -91,3 +92,19 @@ r.get("/getYieldiBGT/:bvault", validate([param("bvault").isEthereumAddress()]), 
   const [start, end] = await AppDS.manager.find(tables.index_block_time, { where: { block: In([startBlock, endBlock]) } });
   return CommonResponse.success({ yield: ibgtYield.toString(), dur: end.time - start.time }).send(res);
 });
+
+r.get(
+  "/charts-data/:vault/:start/:end",
+  validate([param("vault").isEthereumAddress(), param("start").isNumeric({ no_symbols: true }), param("end").isNumeric({ no_symbols: true })]),
+  async (req, res) => {
+    const start = parseInt(req.params["start"]);
+    const end = parseInt(req.params["end"]);
+    const vault = req.params["vault"] as Address;
+    const vc = BVAULT2_CONFIGS.find((vc) => isAddressEqual(vc.vault, vault));
+    let data: any = [];
+    if (vc) {
+      data = await AppDS.manager.findBy(tables.bvault2_charts, { vault: vault, time: Between(start, end) });
+    }
+    CommonResponse.success(data).send(res);
+  }
+);
