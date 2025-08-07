@@ -9,10 +9,6 @@ export const timeNumTrans: ValueTransformer = {
   to: (value: number) => new Date(value * 1000).toLocaleString("zh"),
   from: (value: string) => Math.floor(new Date(value).getTime() / 1000),
 };
-export const timeNumTrans2: ValueTransformer = {
-  to: (value: number) => new Date(value * 1000).toUTCString(),
-  from: (value: string) => Math.floor(new Date(value).getTime() / 1000),
-};
 
 // ************************************************** index_config *****************************************************
 @Entity()
@@ -406,7 +402,7 @@ export class bvault2_charts {
   declare id: number;
   @Column({ type: "varchar", length: 42 })
   declare vault: Address;
-  @Column({ type: "timestamp", transformer: timeNumTrans2 })
+  @Column({ type: "timestamp", transformer: timeNumTrans })
   declare time: number;
 
   @Column({ type: "decimal", precision: 64, transformer: bnTrans})
