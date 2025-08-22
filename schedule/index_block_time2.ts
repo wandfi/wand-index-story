@@ -11,10 +11,10 @@ export default function indexBlockTime2() {
   loopRun(
     name,
     async () => {
-      const params = await getIndexEventParams(sepolia.id,name, 10000n, 0n);
+      const params = await getIndexEventParams(sepolia.id,name, 50n, 0n);
       // console.info(name, params);
       if (!params||params.start == 1n) return;
-      const pc = getPC(sepolia.id);
+      const pc = getPC(sepolia.id, 0);
       const blockNums = _.range(parseInt(params.start.toString()), parseInt(params.end.toString()) + 1).map((num) => BigInt(num));
       const blocks = await Promise.all(blockNums.map((bn) => pc.getBlock({ blockNumber: bn })));
       await AppDS.manager.transaction(async (ma) => {

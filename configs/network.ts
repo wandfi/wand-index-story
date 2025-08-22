@@ -1,7 +1,6 @@
-import { defineChain } from "viem";
 import type { Address, Chain } from "viem";
-import { CONFIGS } from ".";
-import { arbitrum as arbitrumMain } from "viem/chains";
+import { defineChain } from "viem";
+import { arbitrum as arbitrumMain, story as storyMain } from "viem/chains";
 export const storyTestnet = defineChain({
   id: 1315,
   name: "Story Aeneid Testnet",
@@ -28,16 +27,10 @@ export const storyTestnet = defineChain({
   },
 });
 export const story = defineChain({
-  id: 1514,
-  name: "Story",
-  nativeCurrency: {
-    decimals: 18,
-    name: "IP",
-    symbol: "IP",
-  },
+  ...storyMain,
   rpcUrls: {
-    default: { http: ["https://story-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX"] },
-    others: {
+    ...storyMain.rpcUrls,
+    alchemy: {
       http: ["https://story-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX"],
     },
   },
@@ -88,9 +81,7 @@ export const sepolia = defineChain({
 export const arbitrum = defineChain({
   ...arbitrumMain,
   rpcUrls: {
-    default: {
-      http: ["https://arb-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX"],
-    },
+    ...arbitrumMain.rpcUrls,
     alchemy: {
       http: ["https://arb-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX"],
     },
