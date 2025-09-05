@@ -110,7 +110,7 @@ r.get(
 );
 
 
-r.get("/info/:bvualt", validate([param("bvault").isEthereumAddress()]), async (req, res) => {
+r.get("/info/:bvault", validate([param("bvault").isEthereumAddress()]), async (req, res) => {
   const bvault = req.params["bvault"] as Address;
   const repoDeposit = AppDS.getRepository(tables.event_bvault_deposit);
   const repoSwap = AppDS.getRepository(tables.event_bvault_swap);
