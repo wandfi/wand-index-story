@@ -108,3 +108,22 @@ r.get(
     CommonResponse.success(data).send(res);
   }
 );
+
+
+r.get("/info/:bvualt", validate([param("bvault").isEthereumAddress()]), async (req, res) => {
+  const bvault = req.params["bvault"] as Address;
+  const repoDeposit = AppDS.getRepository(tables.event_bvault_deposit);
+  const repoSwap = AppDS.getRepository(tables.event_bvault_swap);
+  const data = await AppDS.query<{ name: string; count: number }[]>(`
+      Select 'depositCount' as name, Count(*) as count from ${repoDeposit.metadata.tableName} where address='${bvault}'
+	      UNION ALL
+      Select 'swapCount' as name, Count(*) as count from ${repoSwap.metadata.tableName} where address='${bvault}'
+        UNION ALL
+      Select 'ytHolders' as name, Count(Distinct user) as count from ${repoSwap.metadata.tableName} where address='${bvault}'  
+    `);
+  const info: any = {};
+  for (const item of data) {
+    info[item.name] = item.count;
+  }
+  CommonResponse.success(info).send(res);
+});
