@@ -26,4 +26,15 @@ export const BVAULT2_CONFIGS: Bvault2Config[] = [
     btPriceUsd: async () => DECIMAL,
     underlingApy: async () => BigInt(7e16),
   },
+  {
+    chain: story.id,
+    vault: "0x1e46583d9da2f28cea5d075c57d71d919353b3d9",
+    market: "0xBf33a461E88244066e8E2e758E4dB13DC43d9b5a",
+    bt: "0x3bb7dc96832f8f98b8aa2e9f2cc88a111f96a118",
+    hook: "0x44d1d53433aaa6ab4325f90ee216b18f1ceafa88",
+    start: 8142366n,
+    decimals: 18,
+    btPriceUsd: async () => DECIMAL,
+    underlingApy: async () => BigInt(7e16),
+  },
 ];
