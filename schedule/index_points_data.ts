@@ -17,7 +17,7 @@ async function nextTime(vc: Bvault2Config) {
     let time = await getBlockTimeBy(vc.chain, vc.start + 1n);
     console.info("nextTime:", vc.start + 1n, time);
     if (!time) return undefined;
-    time = toUtc0000UnixTime(time)
+    time = toUtc0000UnixTime(time);
     return { block: vc.start + 1n, time: time };
   }
   const time = toUtc0000UnixTime(Math.round(new Date(last.time).getTime() / 1000 + 25 * 60 * 60));
@@ -106,6 +106,7 @@ export default function indexPointsData() {
       if (minIndexed == 0n || minIndexed <= vc.start) continue;
       const nt = await nextTime(vc);
       if (!nt) continue;
+      console.info(`indexPointsData:${vc.vault}:doUpdatePoint`, minIndexed, nt);
       await updatePointData(vc, nt);
     }
   });

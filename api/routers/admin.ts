@@ -1,15 +1,14 @@
 import { CONFIGS } from "@/configs";
+import { InfraredVaultMapBVault } from "@/configs/infrared";
 import { AppDS, tables } from "@/db";
-import { getIndexConfig, upIndexConfig } from "@/db/help";
-import { cacheGetNftAddress } from "@/lib/cacheGet";
+import { upIndexConfig } from "@/db/help";
 import express from "express";
-import { body, header, param, query } from "express-validator";
+import { body, header, param } from "express-validator";
+import _ from "lodash";
 import { Like } from "typeorm";
 import { isAddressEqual, parseAbiItem, recoverMessageAddress, type Address } from "viem";
 import { CommonResponse } from "../common";
 import { validate } from "../validator";
-import _ from "lodash";
-import { InfraredVaultMapBVault } from "@/configs/infrared";
 const r = express.Router();
 export default r;
 r.use(validate([header("authorization").isBase64().notEmpty()]), async (req, res, next) => {
@@ -86,49 +85,12 @@ const needEvents: { table: keyof typeof tables; event: string }[] = [
   { table: "event_bvault_swap", event: "event Swap(uint256 indexed epochId, address indexed user, uint256 assetAmount, uint256 fees, uint256 pTokenAmount, uint256 yTokenAmount)" },
 ];
 
-/**
-  event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-  event NftDeposit(uint256 indexed epochId, address indexed user, uint256 indexed tokenId)
-  event NftDepositClaimed(uint256 indexed epochId, address indexed user, uint256 indexed tokenId);
-  event NftRedeem(uint256 indexed epochId, address indexed user, uint256 indexed tokenId);
-  event NftRedeemClaimed(uint256 indexed epochId, address indexed user, uint256 indexed tokenId);
-  event EpochStarted(uint256 epochId, uint256 startTime, uint256 duration)
- */
-const lntVaultNeedEvents: { table: keyof typeof tables; event: string }[] = [
-  { table: "event_erc721_transfer", event: "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)" },
-  { table: "event_lntvault_NftDeposit", event: "event NftDeposit(uint256 indexed epochId, address indexed user, uint256 indexed tokenId)" },
-  { table: "event_lntvault_NftDepositClaimed", event: "event NftDepositClaimed(uint256 indexed epochId, address indexed user, uint256 indexed tokenId)" },
-  { table: "event_lntvault_NftRedeem", event: "event NftRedeem(uint256 indexed epochId, address indexed user, uint256 indexed tokenId)" },
-  { table: "event_lntvault_NftRedeemClaimed", event: "event NftRedeemClaimed(uint256 indexed epochId, address indexed user, uint256 indexed tokenId)" },
-  { table: "event_lntvault_EpochStarted", event: "event EpochStarted(uint256 epochId, uint256 startTime, uint256 duration)" },
-];
-
 r.post("/addIndexBVault/:bvault/:createAt", validate([param("bvault").isEthereumAddress(), param("createAt").isNumeric({ no_symbols: true })]), async (req, res) => {
   const events = needEventsOld.map((item) => ({ address: req.params["bvault"] as Address, ...item, start: BigInt(req.params["createAt"]) }));
   await AppDS.manager.upsert(tables.index_event, events, ["address", "table"]);
   CommonResponse.success().send(res);
 });
 
-r.post(
-  "/addIndexLntVault/:vault/:createAt/:nftStart",
-  validate([param("vault").isEthereumAddress(), param("createAt").isNumeric({ no_symbols: true }), param("nftStart").isNumeric({ no_symbols: true })]),
-  async (req, res) => {
-    const vault = req.params["vault"] as Address;
-    const createAt = BigInt(req.params["createAt"]);
-    const nftStart = BigInt(req.params["nftStart"]);
-    const nftAddress = await cacheGetNftAddress(vault);
-    const events = lntVaultNeedEvents.map((item) => {
-      const isNftTransfer = item.table === "event_erc721_transfer";
-      return { address: isNftTransfer ? nftAddress : vault, ...item, start: isNftTransfer ? nftStart : createAt };
-    });
-    const block = await getIndexConfig("index_block_time2", 0n);
-    if (block == 0n) {
-      await upIndexConfig("index_block_time2", createAt);
-    }
-    await AppDS.manager.upsert(tables.index_event, events, ["address", "table"]);
-    CommonResponse.success().send(res);
-  }
-);
 
 r.post("/delIndexLntVault/:vault", validate([param("vault").isEthereumAddress()]), async (req, res) => {
   const vault = req.params["vault"] as Address;
