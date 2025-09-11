@@ -14,9 +14,10 @@ async function nextTime(vc: Bvault2Config) {
   const last = await AppDS.getRepository(tables.bvault_points_data).createQueryBuilder().select("MAX(time)", "time").where({ vault: vc.vault }).getRawOne<{ time: string }>();
   //   const last = await AppDS.manager.findOne(tables.bvault_points_data, { where: { vault: vc.vault }, order: { time: "DESC" } });
   if (!last || !last.time) {
-    const time = await getBlockTimeBy(vc.chain, vc.start + 1n);
+    let time = await getBlockTimeBy(vc.chain, vc.start + 1n);
     console.info("nextTime:", vc.start + 1n, time);
     if (!time) return undefined;
+    time = toUtc0000UnixTime(time)
     return { block: vc.start + 1n, time: time };
   }
   const time = toUtc0000UnixTime(Math.round(new Date(last.time).getTime() / 1000 + 25 * 60 * 60));
