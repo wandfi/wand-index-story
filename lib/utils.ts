@@ -5,6 +5,14 @@ export const DECIMAL = 10n ** 18n;
 export type UnwrapPromise<T> = T extends Promise<infer S> ? S : T;
 export type UnPromise<T> = T extends () => Promise<infer U> ? U : UnwrapPromise<T>;
 
+export function getErrorMsg(error: any) {
+  // msg
+  let msg = "Unkown";
+  if (typeof error == "string") msg = error;
+  else if (typeof error?.msg == "string") msg = error?.msg;
+  else if (typeof error?.message == "string") msg = error?.message;
+  return msg;
+}
 export function getEnv(value: string, defaultValue: any = ""): string {
   return process.env[value] || `${defaultValue}`;
 }
@@ -16,7 +24,7 @@ export function loopRun(name: string, fn: () => Promise<void>, wait = 2000) {
       try {
         await fn();
       } catch (error) {
-        console.error(`${name}_Error`, error);
+        console.error(`${name}_Error`, getErrorMsg(error));
       }
       await new Promise((resovle) => setTimeout(resovle, wait));
     }
@@ -97,7 +105,6 @@ export function toUtc0000UnixTime(time: number) {
   return Math.round(date.getTime() / 1000);
 }
 
-
 export async function promiseAll<ObjTask extends { [k: string]: Promise<any> }>(objTask: ObjTask) {
   const keys: (keyof ObjTask)[] = Object.keys(objTask);
   const datas = await Promise.all(keys.map((item) => objTask[item]));
@@ -107,7 +114,6 @@ export async function promiseAll<ObjTask extends { [k: string]: Promise<any> }>(
   });
   return data as { [k in keyof ObjTask]: UnwrapPromise<ObjTask[k]> };
 }
-
 
 export function bnToNumber(bn: bigint, decimal: number = 18) {
   return parseFloat(formatUnits(bn, decimal));

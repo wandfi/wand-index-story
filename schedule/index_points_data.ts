@@ -4,7 +4,7 @@ import { INDEX_EVENTV2_CONFIGS } from "@/configs/indexEventsV2";
 import { AppDS, tables } from "@/db";
 import { getBlockByTime, getBlockTimeBy, getIndexConfig, getIndexedBlock } from "@/db/help";
 import { getPC } from "@/lib/publicClient";
-import { bigintMin, loopRun, promiseAll, toUtc0000UnixTime } from "@/lib/utils";
+import { bigintMin, getErrorMsg, loopRun, promiseAll, toUtc0000UnixTime } from "@/lib/utils";
 import { flatten, uniqBy } from "lodash";
 import { erc20Abi, formatUnits, isAddressEqual, type Address, type PublicClient } from "viem";
 import { indexEventV2Name } from "./index_events_v2";
@@ -58,7 +58,7 @@ async function getUsersBy(vc: Bvault2Config, block: bigint) {
   return uniqUsers;
 }
 
-async function getUserPoint(pc: PublicClient, vc: Bvault2Config, user: Address, blockNumber: bigint): Promise<{ address: Address; balance: string }> {
+async function getUserPoint(pc: PublicClient, vc: Bvault2Config, user: Address, blockNumber: bigint): Promise<{ address: Address; balance: string } | null> {
   const data = await promiseAll({
     btBalance: pc.readContract({ abi: erc20Abi, address: vc.bt, functionName: "balanceOf", args: [user], blockNumber }),
     hookBalance: pc.readContract({ abi: erc20Abi, address: vc.hook, functionName: "balanceOf", args: [user], blockNumber }),
@@ -76,10 +76,11 @@ async function getUserPoint(pc: PublicClient, vc: Bvault2Config, user: Address, 
   if (data.epochCount > 0n) {
     const epoch = await pc.readContract({ abi: abiBVault2, address: vc.vault, functionName: "epochInfoById", args: [data.epochCount], blockNumber });
     const ytBalance = await pc.readContract({ abi: erc20Abi, address: epoch.YT, functionName: "balanceOf", args: [user], blockNumber });
-    if (ytBalance > 0n) {
+    if (ytBalance > 0n && !epoch.settledOnEnd) {
       point += await pc.readContract({ abi: abiBVault2, address: vc.vault, functionName: "quoteExactYTforBT", args: [ytBalance], blockNumber });
     }
   }
+  if (point == 0n) return null;
   return { address: user, balance: formatUnits(point, vc.decimals) };
 }
 
@@ -87,8 +88,9 @@ async function updatePointData(vc: Bvault2Config, nt: { block: bigint; time: num
   const users = await getUsersBy(vc, nt.block);
   const pc = getPC(vc.chain);
   const data = await Promise.all(users.map(({ user }) => getUserPoint(pc, vc, user, nt.block)));
+  const filterData = data.filter((item) => item !== null);
   AppDS.manager.transaction(async (ma) => {
-    await ma.upsert(tables.bvault_points_data, { vault: vc.vault, time: nt.time, data }, ["vault", "time"]);
+    await ma.upsert(tables.bvault_points_data, { vault: vc.vault, time: nt.time, data: filterData }, ["vault", "time"]);
   });
 }
 
@@ -102,12 +104,17 @@ export default function indexPointsData() {
   loopRun("indexPointsData", async () => {
     // const todayTime = toUtc0000UnixTime(Math.floor(now() / 1000));
     for (const vc of BVAULT2_CONFIGS) {
-      const minIndexed = await getMinIndexedBlock(vc);
-      if (minIndexed == 0n || minIndexed <= vc.start) continue;
-      const nt = await nextTime(vc);
-      if (!nt) continue;
-      console.info(`indexPointsData:${vc.vault}:doUpdatePoint`, minIndexed, nt);
-      await updatePointData(vc, nt);
+      try {
+        const minIndexed = await getMinIndexedBlock(vc);
+        if (minIndexed == 0n || minIndexed <= vc.start) continue;
+        const nt = await nextTime(vc);
+        if (!nt) continue;
+        console.info(`indexPointsData:${vc.vault}:doUpdatePoint`, minIndexed, nt);
+        await updatePointData(vc, nt);
+      } catch (error) {
+        console.error(`indexPointsData:${vc.vault}:error`, getErrorMsg(error));
+        continue;
+      }
     }
   });
 }
