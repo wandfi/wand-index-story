@@ -33,7 +33,7 @@ async function nextTime() {
 async function getUsersBy(block: bigint) {
   const users = await AppDS.getRepository(tables.eventV2_erc20_Transfer)
     .createQueryBuilder()
-    .select(`"to"`, "user")
+    .select("`to`", "user")
     .distinct(true)
     .where("block<=:block AND address=:address", { block, address: ariaVaultBT })
     .getRawMany<{ user: Address }>();
