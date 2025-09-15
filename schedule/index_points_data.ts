@@ -71,15 +71,23 @@ async function getUserPoint(pc: PublicClient, vc: Bvault2Config, user: Address, 
   let point = data.btBalance;
   if (data.epochCount > 0n) {
     const epoch = await pc.readContract({ abi: abiBVault2, address: vc.vault, functionName: "epochInfoById", args: [data.epochCount], blockNumber });
-    const ytBalance = await pc.readContract({ abi: erc20Abi, address: epoch.YT, functionName: "balanceOf", args: [user], blockNumber });
-    // yt convert to point (1:1 yt:point)
-    if (ytBalance > 0n && !epoch.settledOnEnd) {
-      point += ytBalance;
-    }
-    // lp convert to point (lp split bt + yt)
-    if (data.hookBalance > 0n) {
-      const [bt, , ytOut] = await pc.readContract({ abi: abiBvault2Query, code: codeBvualt2Query, functionName: "calcRemoveLP", args: [vc.vault, data.hookBalance], blockNumber });
-      point = point + ytOut + bt;
+    if (!epoch.settledOnEnd) {
+      const ytBalance = await pc.readContract({ abi: erc20Abi, address: epoch.YT, functionName: "balanceOf", args: [user], blockNumber });
+      // yt convert to point (1:1 yt:point)
+      if (ytBalance > 0n) {
+        point += ytBalance;
+      }
+      // lp convert to point (lp split bt + yt)
+      if (data.hookBalance > 0n) {
+        const [bt, , ytOut] = await pc.readContract({
+          abi: abiBvault2Query,
+          code: codeBvualt2Query,
+          functionName: "calcRemoveLP",
+          args: [vc.vault, data.hookBalance],
+          blockNumber,
+        });
+        point = point + ytOut + bt;
+      }
     }
   } else if (data.hookBalance > 0n) {
     point += (data.hookBalance * data.hookBT_PT[0]) / data.hookTotal;
