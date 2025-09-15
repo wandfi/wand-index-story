@@ -33,7 +33,7 @@ async function nextTime() {
 async function getUsersBy(block: bigint) {
   const users = await AppDS.getRepository(tables.eventV2_erc20_Transfer)
     .createQueryBuilder()
-    .select("to", "user")
+    .select("`to`", "user")
     .distinct(true)
     .where("block<=:block AND address=:address", { block, address: ariaVaultBT })
     .getRawMany<{ user: Address }>();
@@ -51,11 +51,9 @@ async function getUserPoint(
 ): Promise<{ address: Address; balance: string } | null> {
   // skip zeroAddress
   if (user === zeroAddress) return null;
-  const data = await promiseAll({
-    btBalance: pc.readContract({ abi: erc20Abi, address: bt, functionName: "balanceOf", args: [user], blockNumber }),
-  });
+  const btBalance = await pc.readContract({ abi: erc20Abi, address: bt, functionName: "balanceOf", args: [user], blockNumber });
   // bt to point (1:1 bt:point)
-  let point = data.btBalance;
+  let point = btBalance;
   for (const vc of vcs) {
     const { hookBalance, epochCount, hookTotal, hookBT_PT } = await promiseAll({
       hookBalance: pc.readContract({ abi: erc20Abi, address: vc.hook, functionName: "balanceOf", args: [user], blockNumber }),
