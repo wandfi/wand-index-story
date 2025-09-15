@@ -79,8 +79,10 @@ async function getUserPoint(pc: PublicClient, vc: Bvault2Config, user: Address, 
     // lp convert to point (lp split bt + yt)
     if (data.hookBalance > 0n) {
       const [bt, , ytOut] = await pc.readContract({ abi: abiBvault2Query, code: codeBvualt2Query, functionName: "calcRemoveLP", args: [vc.vault, data.hookBalance], blockNumber });
-      point += ytOut + bt;
+      point = point + ytOut + bt;
     }
+  } else if (data.hookBalance > 0n) {
+    point += (data.hookBalance * data.hookBT_PT[0]) / data.hookTotal;
   }
   if (point == 0n) return null;
   return { address: user, balance: formatUnits(point, vc.decimals) };
