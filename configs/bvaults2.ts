@@ -1,6 +1,7 @@
 import type { Address } from "viem";
 import { story } from "./network";
 import { DECIMAL } from "@/lib/utils";
+import { uniq } from "lodash";
 
 export type Bvault2Config = {
   chain: number;
@@ -38,3 +39,5 @@ export const BVAULT2_CONFIGS: Bvault2Config[] = [
     underlingApy: async () => BigInt(7e16),
   },
 ];
+
+export const BTS: Address[] = uniq(BVAULT2_CONFIGS.map(item => item.bt))

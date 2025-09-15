@@ -54,6 +54,12 @@ async function getUsersBy(vc: Bvault2Config, block: bigint) {
       .distinct(true)
       .where("block<=:block AND address=:address", { block, address: vc.vault })
       .getRawMany<{ user: Address }>(),
+    AppDS.getRepository(tables.eventV2_erc20_Transfer)
+      .createQueryBuilder()
+      .select("to","user")
+      .distinct(true)
+      .where("block<=:block AND address=:address", { block, address: vc.bt })
+      .getRawMany<{ user: Address }>(),
   ]);
   const uniqUsers = uniqBy(flatten(users), (item) => item.user.toLowerCase());
   return uniqUsers;
@@ -107,7 +113,7 @@ async function updatePointData(vc: Bvault2Config, nt: { block: bigint; time: num
 }
 
 async function getMinIndexedBlock(vc: Bvault2Config) {
-  const ie2cs = INDEX_EVENTV2_CONFIGS.filter((item) => isAddressEqual(item.address, vc.market) || isAddressEqual(item.address, vc.vault));
+  const ie2cs = INDEX_EVENTV2_CONFIGS.filter((item) => isAddressEqual(item.address, vc.market) || isAddressEqual(item.address, vc.vault) || isAddressEqual(item.address, vc.bt));
   const blocks = await Promise.all([getIndexedBlock(vc.chain), ...ie2cs.map((ie) => getIndexConfig(indexEventV2Name(ie)))]);
   return bigintMin(blocks);
 }

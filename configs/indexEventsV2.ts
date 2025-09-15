@@ -1,5 +1,5 @@
 import type { tables } from "@/db";
-import { flatten } from "lodash";
+import { flatten, uniqBy } from "lodash";
 import type { Address } from "viem";
 import { BVAULT2_CONFIGS } from "./bvaults2";
 
@@ -9,6 +9,7 @@ export type IndexEventV2Config = {
   event: string;
   address: Address;
   start: bigint;
+  chunk?: bigint;
 };
 
 export const INDEX_EVENTV2_CONFIGS = flatten(
@@ -42,4 +43,16 @@ export const INDEX_EVENTV2_CONFIGS = flatten(
       address: item.vault,
     },
   ])
+).concat(
+  uniqBy(
+    BVAULT2_CONFIGS.map<IndexEventV2Config>((vc) => ({
+      chain: vc.chain,
+      table: "eventV2_erc20_Transfer",
+      event: "event Transfer(address indexed from, address indexed to, uint256 value)",
+      address: vc.bt,
+      start: 6745320n,
+      chunk: 10000n,
+    })),
+    ["address", "chain"]
+  )
 );

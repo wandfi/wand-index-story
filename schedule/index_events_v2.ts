@@ -12,7 +12,7 @@ export function indexEventV2Name(ec: IndexEventV2Config) {
 async function fetchEvent(ec: IndexEventV2Config) {
   // console.info('ec:', ec)
   const indexCurrentName = indexEventV2Name(ec);
-  const params = await getIndexEventParams(ec.chain, indexCurrentName, 5000n, ec.start);
+  const params = await getIndexEventParams(ec.chain, indexCurrentName, ec.chunk, ec.start);
   const table = tables[ec.table];
   if (!params || !table) return;
   const { start, end } = params;

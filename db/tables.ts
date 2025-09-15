@@ -158,6 +158,15 @@ class eventV2_bvault2_MintPTandYT extends event_baseV2 {
   @Column({ type: "decimal", precision: 64, transformer: bnTrans })
   declare amount: bigint;
 }
+@Entity("eventV2_erc20_Transfer") // event Transfer(address indexed from, address indexed to, uint256 value);
+class eventV2_erc20_Transfer extends event_baseV2 {
+  @Column({ type: "varchar", length: 42 })
+  declare from: Address;
+  @Column({ type: "varchar", length: 42 })
+  declare to: Address;
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
+  declare value: bigint;
+}
 
 // ************************************************** event_bvault_epoch_started *****************************************************
 // "event EpochStarted(uint256 epochId,uint256 startTime,uint256 duration,address redeemPool)"
@@ -395,6 +404,16 @@ export class bvault_points_data {
   @Column({ type: "json" })
   declare data: { address: Address; balance: string }[];
 }
+@Entity("points_data_for_aria")
+@Index(["time"], { unique: true })
+export class points_data_for_aria {
+  @PrimaryGeneratedColumn()
+  declare id: number;
+  @Column({ type: "timestamp", transformer: timeNumTrans })
+  declare time: number;
+  @Column({ type: "json" })
+  declare data: { address: Address; balance: string }[];
+}
 @Entity("bvault2_charts")
 @Index(["vault", "time"], { unique: true })
 export class bvault2_charts {
@@ -446,6 +465,8 @@ export const tables = {
   eventV2_bvault2_SwapBTforPT,
   eventV2_bvault2_SwapBTforYT,
   eventV2_bvault2_MintPTandYT,
+  eventV2_erc20_Transfer,
   bvault_points_data,
+  points_data_for_aria,
   bvault2_charts,
 };
