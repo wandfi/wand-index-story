@@ -55,6 +55,7 @@ async function getUserPoint(
   // bt to point (1:1 bt:point)
   let point = btBalance;
   for (const vc of vcs) {
+    if(blockNumber < vc.start) continue;
     const { hookBalance, epochCount, hookTotal, hookBT_PT } = await promiseAll({
       hookBalance: pc.readContract({ abi: erc20Abi, address: vc.hook, functionName: "balanceOf", args: [user], blockNumber }),
       hookTotal: pc.readContract({ abi: erc20Abi, address: vc.hook, functionName: "totalSupply", blockNumber }),
