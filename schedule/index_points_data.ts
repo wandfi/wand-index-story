@@ -1,4 +1,4 @@
-import { abiBVault2, abiHook } from "@/configs/abiBvault2";
+import { abiBVault2, abiBvault2Query, abiHook } from "@/configs/abiBvault2";
 import { BVAULT2_CONFIGS, type Bvault2Config } from "@/configs/bvaults2";
 import { INDEX_EVENTV2_CONFIGS } from "@/configs/indexEventsV2";
 import { AppDS, tables } from "@/db";
@@ -8,6 +8,7 @@ import { bigintMin, getErrorMsg, loopRun, promiseAll, toUtc0000UnixTime } from "
 import { flatten, uniqBy } from "lodash";
 import { erc20Abi, formatUnits, isAddressEqual, type Address, type PublicClient } from "viem";
 import { indexEventV2Name } from "./index_events_v2";
+import { codeBvualt2Query } from "@/configs/codes";
 
 // next day time
 async function nextTime(vc: Bvault2Config) {
@@ -66,18 +67,19 @@ async function getUserPoint(pc: PublicClient, vc: Bvault2Config, user: Address, 
     hookBT_PT: pc.readContract({ abi: abiHook, address: vc.hook, functionName: "getReserves", blockNumber }),
     epochCount: pc.readContract({ abi: abiBVault2, address: vc.vault, functionName: "epochIdCount", blockNumber }),
   });
-  // bt
+  // bt to point (1:1 bt:point)
   let point = data.btBalance;
-  // lpAmount includes bt
-  if (data.hookBalance > 0n) {
-    point += (data.hookBalance * data.hookBT_PT[0]) / data.hookTotal;
-  }
-  // yt convert to bt
   if (data.epochCount > 0n) {
     const epoch = await pc.readContract({ abi: abiBVault2, address: vc.vault, functionName: "epochInfoById", args: [data.epochCount], blockNumber });
     const ytBalance = await pc.readContract({ abi: erc20Abi, address: epoch.YT, functionName: "balanceOf", args: [user], blockNumber });
+    // yt convert to point (1:1 yt:point)
     if (ytBalance > 0n && !epoch.settledOnEnd) {
-      point += await pc.readContract({ abi: abiBVault2, address: vc.vault, functionName: "quoteExactYTforBT", args: [ytBalance], blockNumber });
+      point += ytBalance;
+    }
+    // lp convert to point (lp split bt + yt)
+    if (data.hookBalance > 0n) {
+      const [bt, , ytOut] = await pc.readContract({ abi: abiBvault2Query, code: codeBvualt2Query, functionName: "calcRemoveLP", args: [vc.vault, data.hookBalance], blockNumber });
+      point += ytOut + bt;
     }
   }
   if (point == 0n) return null;
