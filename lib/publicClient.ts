@@ -1,6 +1,6 @@
-import { apiBatchConfig, getCurrentChainId, multicallBatchConfig, SUPPORT_CHAINS } from "@/configs/network";
-import _, { flatten, isNumber, keys, random } from "lodash";
-import { createPublicClient, http, type Chain, type PublicClient } from "viem";
+import { apiBatchConfig, multicallBatchConfig, SUPPORT_CHAINS } from "@/configs/network";
+import { flatten, isNumber, keys, random } from "lodash";
+import { createPublicClient, http, webSocket, type Chain, type PublicClient } from "viem";
 
 const pcMaps: { [id: number]: { pcs: PublicClient[]; current: number } } = {};
 
@@ -31,7 +31,7 @@ function createPCS(chainId: number) {
       name: `${rpc.name}-${rpc.type}-${index}`,
       batch: { multicall: multicallBatchConfig },
       chain: SUPPORT_CHAINS.find((c) => c.id == chainId)!,
-      transport: http(rpc.url, { batch: apiBatchConfig }),
+      transport: rpc.type == "http" ? http(rpc.url, { batch: apiBatchConfig }) : webSocket(rpc.url, {}),
     });
     return pc;
   });
