@@ -1,14 +1,14 @@
 import abiBVault from "@/configs/abiBVault";
+import { story } from "@/configs/network";
 import { AppDS, event_bvault_epoch_started_v2, index_bvault_epoch_yt_price, index_event, tables } from "@/db";
-import { getIndexConfig, upIndexConfig } from "@/db/help";
+import { cacheGetBlocks1Hour, cacheGetTimeByBlock, getIndexConfig, upIndexConfig } from "@/db/help";
 import { getPC } from "@/lib/publicClient";
 import { bigintMax, bigintMin, DECIMAL, loopRun, toMap } from "@/lib/utils";
 import _ from "lodash";
-import { In, LessThanOrEqual, MoreThanOrEqual, Raw } from "typeorm";
+import { LessThanOrEqual, Raw } from "typeorm";
 import type { Address, ContractFunctionExecutionError, PublicClient } from "viem";
 import { indexEventName } from "./index_events";
 import { getIndexEventParams } from "./utils";
-import { story } from "@/configs/network";
 const subAbi = abiBVault.filter((item) => item.name == "Y" || item.name == "yTokenUserBalance");
 async function getBvaultEpochYTPrice(pc: PublicClient, vault: Address, epochId: bigint, block: bigint) {
   const [Y, vaultYTokenBalance] = await Promise.all([
@@ -28,46 +28,45 @@ async function getBvaultEpochYTPrice(pc: PublicClient, vault: Address, epochId: 
 }
 
 async function indexBvaultEpochYTPrice(name: string, ie: index_event) {
-  const params = await getIndexEventParams(story.id, name, 12000n, ie.start);
+  const params = await getIndexEventParams(ie.chain ?? story.id, name, 12000n, ie.start);
   if (!params) return;
   const eventblock = await getIndexConfig(indexEventName(ie), 1n);
-  const indexBlockTimeBlock = await getIndexConfig("index_block_time", 1n);
-  params.end = bigintMin([eventblock, params.end, indexBlockTimeBlock]);
+  params.end = bigintMin([eventblock, params.end]);
   if (params.start >= params.end) return;
-  const [startIBT, endIBT] = await AppDS.manager.find(tables.index_block_time, { where: { block: In([params.start, params.end]) } });
-  const startTime = BigInt(startIBT.time);
-  const endTime = BigInt(endIBT.time);
-  console.info("times: ", startTime, endTime, ie.address);
+
+  const startIBT = await cacheGetTimeByBlock(ie.chain ?? story.id, params.start);
+  // const endIBT = await cacheGetTimeByBlock(berachain.id, params.end)
+  const startTime = BigInt(startIBT);
+  console.info("times: ", startTime, ie.address);
   const ebesList = await AppDS.manager.find(tables.event_bvault_epoch_started_v2, {
     where: {
       address: ie.address,
-      startTime: LessThanOrEqual(endTime),
+      block: LessThanOrEqual(params.end),
       duration: Raw(() => `duration > ${startTime} - startTime`),
     },
   });
-  const chunkTime = 3600n; // 1 hours
+  const chunkBlock = await cacheGetBlocks1Hour(ie.chain ?? story.id); // 1 hours
   console.info("ebesList", ebesList);
   if (_.isEmpty(ebesList)) {
     await upIndexConfig(name, params.end);
   } else {
     const ebesDatas: { ebes: event_bvault_epoch_started_v2; times: [number, bigint][] }[] = [];
     for (const item of ebesList) {
-      const mStartTime = bigintMax([item.startTime, startTime]);
-      const mEndTime = bigintMin([item.startTime + item.duration, endTime]);
-      const startIndex = (mStartTime - item.startTime) / chunkTime;
-      const endIndex = (mEndTime - item.startTime) / chunkTime;
+      const mStart = bigintMax([item.block, params.start]);
+      const mEnd = bigintMin([(item.duration / 3600n) * chunkBlock + item.block, params.end]);
+      // const mStartTime = bigintMax([item.startTime, startTime]);
+      // const mEndTime = bigintMin([item.startTime + item.duration, endTime]);
+      const startIndex = (mStart - item.block) / chunkBlock;
+      const endIndex = (mEnd - item.block) / chunkBlock;
       const times: [time: number, block: bigint][] = [];
       for (let index = startIndex; index <= endIndex; index++) {
-        const time = index * chunkTime + item.startTime;
-        const ibt = await AppDS.manager.findOne(tables.index_block_time, {
-          where: { time: MoreThanOrEqual(parseInt(time.toString())) },
-        });
-        if (!ibt) throw "Not indexed block time";
-        times.push([parseInt(time.toString()), BigInt(ibt.time) == time ? ibt.block : ibt.block - 1n]);
+        const block = index * chunkBlock + item.block;
+        const time = await cacheGetTimeByBlock(ie.chain ?? story.id, block);
+        times.push([time, block]);
       }
       ebesDatas.push({ ebes: item, times });
     }
-    const pc = getPC(story.id, 1);
+    const pc = getPC(ie.chain ?? story.id, 1);
     const ytPricesItem = (
       await Promise.all(
         ebesDatas.map((item) =>

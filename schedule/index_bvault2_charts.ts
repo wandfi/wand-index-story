@@ -2,7 +2,7 @@ import { abiBVault2, abiBvault2Query } from "@/configs/abiBvault2";
 import { BVAULT2_CONFIGS, type Bvault2Config } from "@/configs/bvaults2";
 import { codeBvualt2Query } from "@/configs/codes";
 import { AppDS, bvault2_charts, tables } from "@/db";
-import { getBlockByTime, getBlockTimeBy, getIndexConfig, getIndexedBlock, upIndexConfig } from "@/db/help";
+import { cacheGetBlocks1Hour, cacheGetTimeByBlock, getIndexConfig, upIndexConfig } from "@/db/help";
 import { getPC } from "@/lib/publicClient";
 import { bigintMin, bnLog, bnPow, bnToNumber, DECIMAL, loopRun, promiseAll } from "@/lib/utils";
 // import { formatEther } from "viem";
@@ -37,21 +37,16 @@ async function getDatasBy(vc: Bvault2Config, blockNumber: bigint, time: number):
   return { ptPrice, ptApy, ytPrice, ytRoi };
 }
 async function nextBlock(name: string, vc: Bvault2Config) {
-  const indexedBlock = await getIndexedBlock(vc.chain);
-  if (indexedBlock < vc.start) return undefined;
   const last = await getIndexConfig(name);
   if (last == 0n) {
-    const t = await getBlockTimeBy(vc.chain, vc.start + 1n);
+    const t = await cacheGetTimeByBlock(vc.chain, vc.start + 1n);
     if (!t) return undefined;
     return { block: vc.start + 1n, time: t };
   }
-  const blockT = await getBlockTimeBy(vc.chain, last);
-  if (!blockT) {
-    return undefined;
-  }
-  const nextTime = blockT + 3600;
-  const nBlock = await getBlockByTime(vc.chain, nextTime);
-  if (!nBlock) return undefined;
+  const nBlock = last + (await cacheGetBlocks1Hour(vc.chain));
+  const latestBlock = await getPC(vc.chain).getBlockNumber({ cacheTime: 3600 * 1000 });
+  if (nBlock > latestBlock) return undefined;
+  const nextTime = await cacheGetTimeByBlock(vc.chain, nBlock);
   return { block: nBlock, time: nextTime };
 }
 async function updateBvault2ChartData(name: string, vc: Bvault2Config) {

@@ -1,9 +1,9 @@
 import { sepolia, story, SUPPORT_CHAINS } from "@/configs/network";
-import { createRunWithPool } from "@/lib/utils";
-import { indexBlockTimeV2NameBy } from "@/schedule/index_block_time_v2";
+import { cacheGet, createRunWithPool } from "@/lib/utils";
 import { MoreThanOrEqual, type EntityManager } from "typeorm";
 import { AppDS } from "./ds";
 import { index_config, tables } from "./tables";
+import { getPCBy } from "@/lib/publicClient";
 
 export async function getIndexConfig(name: string, def = 0n) {
   const ic = await AppDS.manager.findOne(index_config, { where: { name }, select: ["vaule"] });
@@ -16,56 +16,38 @@ export async function upIndexConfig(name: string, vaule: bigint, ma: EntityManag
 
 export const runTransWithPool = createRunWithPool();
 
-export async function getIndexedBlockTime(chain: number) {
-  if (!SUPPORT_CHAINS.find((item) => item.id === chain)) throw new Error("Not supported chain");
+export async function cacheGetTimeByBlock(chain: number, block: bigint) {
   if (chain == story.id) {
-    const block = await getIndexConfig("index_block_time");
-    const item = await AppDS.manager.findOneBy(tables.index_block_time, { block });
-    return { block, time: item?.time ?? 0 };
+    let bt = await AppDS.manager.findOne(tables.index_block_time, { where: { block }, select: ["time"] });
+    if (!bt) {
+      const b = await getPCBy({ chain, name: "default" }).getBlock({ blockNumber: block });
+      const time = parseInt(b.timestamp.toString());
+      await AppDS.manager.upsert(tables.index_block_time, { block, time }, ["block"]);
+      return time;
+    }
+    return bt!.time;
   }
-  if (chain == sepolia.id) {
-    const block = await getIndexConfig("index_block_time2");
-    const item = await AppDS.manager.findOneBy(tables.index_block_time2, { block });
-    return { block, time: item?.time ?? 0 };
+
+  let bt = await AppDS.manager.findOne(tables.index_block_time_v2, { where: { block, chain }, select: ["time"] });
+  if (!bt) {
+    const b = await getPCBy({ chain, name: "default" }).getBlock({ blockNumber: block });
+    const time = parseInt(b.timestamp.toString());
+    await AppDS.manager.upsert(tables.index_block_time_v2, { chain, block, time }, ["chain", "block"]);
+    return time;
   }
-  const block = await getIndexConfig(indexBlockTimeV2NameBy(chain));
-  const item = await AppDS.manager.findOneBy(tables.index_block_time_v2, { block });
-  return { block, time: item?.time ?? 0 };
-}
-export async function getIndexedBlock(chain: number) {
-  if (!SUPPORT_CHAINS.find((item) => item.id === chain)) throw new Error("Not supported chain");
-  if (chain == story.id) {
-    return getIndexConfig("index_block_time");
-  }
-  if (chain == sepolia.id) {
-    return getIndexConfig("index_block_time2");
-  }
-  return getIndexConfig(indexBlockTimeV2NameBy(chain));
+  return bt!.time;
 }
 
-export async function getBlockTimeBy(chain: number, block: bigint) {
-  if (!SUPPORT_CHAINS.find((item) => item.id === chain)) throw new Error("Not supported chain");
-  if (chain == story.id) {
-    const item = await AppDS.manager.findOneBy(tables.index_block_time, { block });
-    return item?.time;
-  }
-  if (chain == sepolia.id) {
-    const item = await AppDS.manager.findOneBy(tables.index_block_time2, { block });
-    return item?.time;
-  }
-  const item = await AppDS.manager.findOneBy(tables.index_block_time_v2, { block });
-  return item?.time;
-}
-export async function getBlockByTime(chain: number, time: number) {
-  if (!SUPPORT_CHAINS.find((item) => item.id === chain)) throw new Error("Not supported chain");
-  if (chain == story.id) {
-    const item = await AppDS.manager.findOneBy(tables.index_block_time, { time: MoreThanOrEqual(time) });
-    return item?.block;
-  }
-  if (chain == sepolia.id) {
-    const item = await AppDS.manager.findOneBy(tables.index_block_time2, { time: MoreThanOrEqual(time) });
-    return item?.block;
-  }
-  const item = await AppDS.manager.findOneBy(tables.index_block_time_v2, { time: MoreThanOrEqual(time) });
-  return item?.block;
+export async function cacheGetBlocks1Hour(chainId: number) {
+  return cacheGet(
+    `Blocks1Hourby-${chainId}`,
+    async () => {
+      const pc = getPCBy({ chain: chainId, name: "default" });
+      const latest = await pc.getBlock({ blockTag: "finalized" });
+      const old = await pc.getBlock({ blockNumber: latest.number - 100000n > 0n ? latest.number - 100000n : 1n });
+      const blocksPerHour = ((latest.number - old.number) * 60n * 60n) / (latest.timestamp - old.timestamp);
+      return blocksPerHour;
+    },
+    24 * 3600 * 1000
+  );
 }

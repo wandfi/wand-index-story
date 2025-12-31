@@ -1,12 +1,23 @@
 import { apiBatchConfig, getCurrentChainId, multicallBatchConfig, SUPPORT_CHAINS } from "@/configs/network";
-import _ from "lodash";
+import _, { flatten, isNumber, keys, random } from "lodash";
 import { createPublicClient, http, type Chain, type PublicClient } from "viem";
 
 const pcMaps: { [id: number]: { pcs: PublicClient[]; current: number } } = {};
 
 function getRpcurls(chain: Chain) {
-  const keys = _.keys(chain.rpcUrls);
-  return _.flatten(keys.map((item) => chain.rpcUrls[item].http));
+  const names = keys(chain.rpcUrls);
+  return flatten(
+    names.map((item) => {
+      const rpcItem = chain.rpcUrls[item];
+      const data: { name: string; type: "http" | "webSocket"; url: string }[] = [];
+      const http = rpcItem.http;
+      data.push(...http.map((url) => ({ name: item, type: "http" as any, url })));
+      if (rpcItem.webSocket) {
+        data.push(...rpcItem.webSocket.map((url) => ({ name: item, type: "webSocket" as any, url })));
+      }
+      return data;
+    })
+  );
 }
 
 function createPCS(chainId: number) {
@@ -15,26 +26,13 @@ function createPCS(chainId: number) {
   const rpcls = getRpcurls(chain);
   console.info("chainid:", chainId, "rpcs:", rpcls);
   if (rpcls.length == 0) throw `No Chain rpc for chianId:${chainId}`;
-  const pcs = rpcls.map((url) => {
+  const pcs = rpcls.map((rpc, index) => {
     const pc = createPublicClient({
+      name: `${rpc.name}-${rpc.type}-${index}`,
       batch: { multicall: multicallBatchConfig },
       chain: SUPPORT_CHAINS.find((c) => c.id == chainId)!,
-      transport: http(url, { batch: apiBatchConfig }),
+      transport: http(rpc.url, { batch: apiBatchConfig }),
     });
-    const originRead = pc.readContract;
-    pc.readContract = async (...args) => {
-      try {
-        // useReadingCountStore.getState().upReadingCount(1)
-        // await isBusy()
-        // @ts-ignore
-        return await originRead(...args);
-      } catch (error) {
-        console.error("readError", error, "\nArgs", [...args]);
-        throw error;
-      } finally {
-        // useReadingCountStore.getState().upReadingCount(-1)
-      }
-    };
     return pc;
   });
   return pcs;
@@ -53,4 +51,14 @@ export function getPC(chainId: number, index?: number) {
     if (item.current >= item.pcs.length) item.current = 0;
     return pc;
   }
+}
+
+export function getPCBy({ chain, index, name, type }: { chain: number; index?: number; name?: string; type?: "http" | "webSocket" }) {
+  if (!pcMaps[chain]) {
+    pcMaps[chain] = { pcs: createPCS(chain), current: 0 };
+  }
+  const pcs = pcMaps[chain];
+  if (isNumber(index)) return pcs.pcs[index];
+  const clients = pcs.pcs.filter((item) => (!name || item.name.startsWith(`${name}-`)) && (!type || item.type == type));
+  return clients[random(clients.length - 1)];
 }

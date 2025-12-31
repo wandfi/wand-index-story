@@ -1,30 +1,29 @@
 import { abiBVault2, abiBvault2Query, abiHook } from "@/configs/abiBvault2";
 import { BVAULT2_CONFIGS, type Bvault2Config } from "@/configs/bvaults2";
+import { codeBvualt2Query } from "@/configs/codes";
 import { INDEX_EVENTV2_CONFIGS } from "@/configs/indexEventsV2";
 import { AppDS, tables } from "@/db";
-import { getBlockByTime, getBlockTimeBy, getIndexConfig, getIndexedBlock } from "@/db/help";
+import { cacheGetBlocks1Hour, cacheGetTimeByBlock, getIndexConfig } from "@/db/help";
 import { getPC } from "@/lib/publicClient";
-import { bigintMin, getErrorMsg, loopRun, promiseAll, toUtc0000UnixTime } from "@/lib/utils";
+import { bigintMin, getErrorMsg, loopRun, promiseAll } from "@/lib/utils";
 import { flatten, uniqBy } from "lodash";
 import { erc20Abi, formatUnits, isAddressEqual, type Address, type PublicClient } from "viem";
 import { indexEventV2Name } from "./index_events_v2";
-import { codeBvualt2Query } from "@/configs/codes";
 
 // next day time
 async function nextTime(vc: Bvault2Config) {
-  const last = await AppDS.getRepository(tables.bvault_points_data).createQueryBuilder().select("MAX(time)", "time").where({ vault: vc.vault }).getRawOne<{ time: string }>();
+  const count = await AppDS.getRepository(tables.bvault_points_data).count({ where: { vault: vc.vault } });
   //   const last = await AppDS.manager.findOne(tables.bvault_points_data, { where: { vault: vc.vault }, order: { time: "DESC" } });
-  if (!last || !last.time) {
-    let time = await getBlockTimeBy(vc.chain, vc.start + 1n);
+  if (count == 0) {
+    let time = await cacheGetTimeByBlock(vc.chain, vc.start + 1n);
     console.info("nextTime:", vc.start + 1n, time);
     if (!time) return undefined;
-    time = toUtc0000UnixTime(time);
     return { block: vc.start + 1n, time: time };
   }
-  const time = toUtc0000UnixTime(Math.round(new Date(last.time).getTime() / 1000 + 25 * 60 * 60));
-  const block = await getBlockByTime(vc.chain, time);
-  console.info("nextTime:", last.time, block, time);
-  if (!block) return undefined;
+  const block = BigInt(count) * (await cacheGetBlocks1Hour(vc.chain)) + vc.start + 1n;
+  const latestBlock = await getPC(vc.chain).getBlockNumber({ cacheTime: 23 * 3600 * 1000 });
+  if (block > latestBlock) return undefined;
+  const time = await cacheGetTimeByBlock(vc.chain, block);
   return { block, time };
 }
 
@@ -56,7 +55,7 @@ async function getUsersBy(vc: Bvault2Config, block: bigint) {
       .getRawMany<{ user: Address }>(),
     AppDS.getRepository(tables.eventV2_erc20_Transfer)
       .createQueryBuilder()
-      .select("to","user")
+      .select("to", "user")
       .distinct(true)
       .where("block<=:block AND address=:address", { block, address: vc.bt })
       .getRawMany<{ user: Address }>(),
@@ -114,7 +113,7 @@ async function updatePointData(vc: Bvault2Config, nt: { block: bigint; time: num
 
 async function getMinIndexedBlock(vc: Bvault2Config) {
   const ie2cs = INDEX_EVENTV2_CONFIGS.filter((item) => isAddressEqual(item.address, vc.market) || isAddressEqual(item.address, vc.vault) || isAddressEqual(item.address, vc.bt));
-  const blocks = await Promise.all([getIndexedBlock(vc.chain), ...ie2cs.map((ie) => getIndexConfig(indexEventV2Name(ie)))]);
+  const blocks = await Promise.all([...ie2cs.map((ie) => getIndexConfig(indexEventV2Name(ie)))]);
   return bigintMin(blocks);
 }
 

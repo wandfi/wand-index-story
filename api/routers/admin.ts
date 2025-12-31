@@ -1,12 +1,10 @@
 import { CONFIGS } from "@/configs";
-import { InfraredVaultMapBVault } from "@/configs/infrared";
 import { AppDS, tables } from "@/db";
 import { upIndexConfig } from "@/db/help";
 import express from "express";
-import { body, header, param } from "express-validator";
-import _ from "lodash";
+import { body, header, param, query } from "express-validator";
 import { Like } from "typeorm";
-import { isAddressEqual, parseAbiItem, recoverMessageAddress, type Address } from "viem";
+import { parseAbiItem, recoverMessageAddress, type Address } from "viem";
 import { CommonResponse } from "../common";
 import { validate } from "../validator";
 const r = express.Router();
@@ -55,6 +53,7 @@ r.post(
         return true;
       }),
     body("start", "Start Error").isNumeric({ no_symbols: true }),
+    body("chain", "Chain Error").isNumeric({ no_symbols: true }).optional(),
   ]),
   async (req, res) => {
     // AppDS.manager.upsert()
@@ -65,6 +64,7 @@ r.post(
         event: req.body.event,
         table: req.body.table,
         start: BigInt(req.body.start),
+        chain: req.body.chain ? Number(req.body.chain) : undefined,
       },
       ["address", "table"]
     );
@@ -72,10 +72,6 @@ r.post(
   }
 );
 
-const needEventsOld: { table: keyof typeof tables; event: string }[] = [
-  { table: "event_bvault_epoch_started", event: "event EpochStarted(uint256 epochId, uint256 startTime, uint256 duration, address redeemPool)" },
-  { table: "event_bvault_deposit", event: "event Deposit(uint256 indexed epochId, address indexed user, uint256 assetAmount, uint256 pTokenAmount, uint256 yTokenAmount)" },
-];
 const needEvents: { table: keyof typeof tables; event: string }[] = [
   {
     table: "event_bvault_epoch_started_v2",
@@ -85,33 +81,21 @@ const needEvents: { table: keyof typeof tables; event: string }[] = [
   { table: "event_bvault_swap", event: "event Swap(uint256 indexed epochId, address indexed user, uint256 assetAmount, uint256 fees, uint256 pTokenAmount, uint256 yTokenAmount)" },
 ];
 
-r.post("/addIndexBVault/:bvault/:createAt", validate([param("bvault").isEthereumAddress(), param("createAt").isNumeric({ no_symbols: true })]), async (req, res) => {
-  const events = needEventsOld.map((item) => ({ address: req.params["bvault"] as Address, ...item, start: BigInt(req.params["createAt"]) }));
-  await AppDS.manager.upsert(tables.index_event, events, ["address", "table"]);
-  CommonResponse.success().send(res);
-});
-
-
-r.post("/delIndexLntVault/:vault", validate([param("vault").isEthereumAddress()]), async (req, res) => {
-  const vault = req.params["vault"] as Address;
-  await AppDS.manager.delete(tables.index_event, { address: vault });
-  CommonResponse.success().send(res);
-});
-
-r.post("/addIndexBVaultV2/:bvault/:createAt", validate([param("bvault").isEthereumAddress(), param("createAt").isNumeric({ no_symbols: true })]), async (req, res) => {
-  const events = needEvents.map((item) => ({ address: req.params["bvault"] as Address, ...item, start: BigInt(req.params["createAt"]) }));
-  const ivault = _.keys(InfraredVaultMapBVault).find((ivault) => isAddressEqual(InfraredVaultMapBVault[ivault], req.params["bvault"] as any)) as Address;
-  if (ivault) {
-    events.push({
-      address: ivault,
-      table: "event_infrared_vault_RewardPaid",
-      event: "event RewardPaid(address indexed user, address indexed rewardsToken, uint256 reward)",
+r.post(
+  "/addIndexBVaultV2/:bvault/:createAt",
+  validate([param("bvault").isEthereumAddress(), param("createAt").isNumeric({ no_symbols: true }), query("chain").isNumeric().optional()]),
+  async (req, res) => {
+    const chain = req.query["chain"] as string;
+    const events = needEvents.map((item) => ({
+      address: req.params["bvault"] as Address,
+      ...item,
       start: BigInt(req.params["createAt"]),
-    });
+      chain: chain ? Number(chain) : undefined,
+    }));
+    await AppDS.manager.upsert(tables.index_event, events, ["address", "table"]);
+    CommonResponse.success().send(res);
   }
-  await AppDS.manager.upsert(tables.index_event, events, ["address", "table"]);
-  CommonResponse.success().send(res);
-});
+);
 
 r.post("/delIndexBVault/:bvault", validate([param("bvault").isEthereumAddress()]), async (req, res) => {
   await AppDS.manager.delete(tables.index_event, { address: req.params["bvault"] as Address });

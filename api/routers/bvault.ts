@@ -51,47 +51,6 @@ r.post("/batchGetEpochPtSynthetic", async (req, res) => {
   CommonResponse.success(map).send(res);
 });
 
-r.get("/getDeposits/:bvault/:epochId", validate([param("bvault").isEthereumAddress(), param("epochId").isNumeric()]), async (req, res) => {
-  const events = await AppDS.manager.find(tables.event_bvault_deposit, { where: { address: req.params["bvault"] as any, epochId: BigInt(req.params["epochId"]) } });
-  const bTime = await AppDS.manager.find(tables.index_block_time, { where: { block: In(events.map((e) => e.block)) } });
-  const bTimeMap = toMap(bTime || [], "block");
-  const datas = events.map((e) => ({ ...e, blockTime: bTimeMap[e.block.toString()].time }));
-  CommonResponse.success(datas).send(res);
-});
-
-r.get("/getYieldiBGT/:bvault", validate([param("bvault").isEthereumAddress()]), async (req, res) => {
-  const bvault = req.params["bvault"] as Address;
-  const ivault = _.keys(InfraredVaultMapBVault).find((ivault) => isAddressEqual(InfraredVaultMapBVault[ivault], bvault)) as Address;
-  if (!ivault) return CommonResponse.badRequest("not find infrared vault by bvault");
-  const indexBlock = await getIndexConfig("index_block_time", 0n);
-  const indexEventRewardPaidBlock = await getIndexConfig(indexEventName({ address: ivault, table: "event_infrared_vault_RewardPaid" } as any), 0n);
-  const minBlock = bigintMin([indexEventRewardPaidBlock, indexBlock]);
-  if (minBlock == 0n) return CommonResponse.badRequest("please wait index_block_time");
-  const firstDeposit = await AppDS.manager.findOne(tables.event_bvault_deposit, { where: { address: bvault } });
-  if (!firstDeposit) return CommonResponse.badRequest("wait index bvault has deposit");
-  const paids = await AppDS.manager.find(tables.event_infrared_vault_RewardPaid, {
-    where: { address: ivault, reward: MoreThan(0n), block: LessThan(minBlock) },
-    order: { block: "DESC" },
-    take: 2,  
-  });
-
-  const earned = await getPC(story.id).readContract({ abi: abiInfraredVault, address: ivault, functionName: "earned", args: [bvault, iBGT], blockNumber: minBlock });
-  let startBlock = firstDeposit.block;
-  let endBlock = minBlock;
-  let ibgtYield = earned;
-  if (earned > 0n && paids.length) {
-    startBlock = paids[0].block;
-  } else if (earned == 0n && paids.length == 1) {
-    endBlock = paids[0].block;
-    ibgtYield = paids[0].reward;
-  } else if (earned == 0n && paids.length == 2) {
-    startBlock = paids[1].block;
-    endBlock = paids[0].block;
-    ibgtYield = paids[0].reward;
-  }
-  const [start, end] = await AppDS.manager.find(tables.index_block_time, { where: { block: In([startBlock, endBlock]) } });
-  return CommonResponse.success({ yield: ibgtYield.toString(), dur: end.time - start.time }).send(res);
-});
 
 r.get(
   "/charts-data/:vault/:start/:end",

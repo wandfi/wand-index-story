@@ -5,7 +5,7 @@ import { body, param } from "express-validator";
 import { isAddress, type Address } from "viem";
 import { CommonResponse } from "../common";
 import { validate } from "../validator";
-import { getIndexConfig } from "@/db/help";
+import { cacheGetTimeByBlock, getIndexConfig } from "@/db/help";
 import { indexEventName } from "@/schedule/index_events";
 import { getPC } from "@/lib/publicClient";
 import abiBVault from "@/configs/abiBVault";
@@ -41,15 +41,6 @@ r.post(
   }
 );
 
-const getBlockTime = async (block: bigint) => {
-  const bt = await AppDS.manager.findOne(tables.index_block_time, { where: { block } });
-  if (bt) {
-    return bt.time;
-  }
-  const b = await getPC(story.id).getBlock({ blockNumber: block });
-  return parseInt(b.timestamp.toString());
-};
-
 r.get("/checkyt/:account", validate([param("account").isEthereumAddress()]), async (req, res) => {
   const account = req.params["account"] as Address;
   const data = {
@@ -63,7 +54,7 @@ r.get("/checkyt/:account", validate([param("account").isEthereumAddress()]), asy
   const swap = await AppDS.manager.findOne(tables.event_bvault_swap, { where: { user: account } });
   if (Boolean(swap)) {
     data.status = 1;
-    data.data.timestamp = await getBlockTime(swap!.block);
+    data.data.timestamp = await cacheGetTimeByBlock(story.id, swap!.block);
     data.data.tx = swap!.tx;
   }
   res.status(200).json(data);
@@ -75,12 +66,11 @@ async function queryPointsByBlock(req: Request, res: Response, bvault: Address, 
     if (!ec || blockNumber <= ec.start) {
       return res.status(404).send();
     }
-    const indexBlockNumber = await getIndexConfig("index_block_time");
     const indexEventBlock = await getIndexConfig(indexEventName(ec));
-    if (blockNumber > indexBlockNumber || blockNumber > indexEventBlock) {
+    if (blockNumber > indexEventBlock) {
       return res.status(500).json({ code: 120, message: "Need wait server index block" });
     }
-    const blockTime = await getBlockTime(blockNumber);
+    const blockTime = await cacheGetTimeByBlock(story.id,blockNumber);
     const pc = getPC(story.id, 1);
     const epochCount = await pc.readContract({ abi: abiBVault, address: bvault, functionName: "epochIdCount", blockNumber });
     if (epochCount == 0n) {
@@ -127,20 +117,4 @@ r.get(`/points/:bvault/:block`, validate([param("bvault").isEthereumAddress(), p
   const bvault = req.params["bvault"] as Address;
   const blockNumber = BigInt(req.params["block"]);
   await queryPointsByBlock(req, res, bvault, blockNumber);
-});
-
-r.get(`/points/:bvault/timestamp/:timestamp`, validate([param("bvault").isEthereumAddress(), param("timestamp").isNumeric()]), async (req, res) => {
-  try {
-    
-    const bvault = req.params["bvault"] as Address;
-    const timestamp = parseInt(req.params["timestamp"]);
-    const indexBlockNumber = await getIndexConfig("index_block_time");
-    const blockTime = await getBlockTime(indexBlockNumber);
-    if (blockTime < timestamp) return res.status(500).json({ code: 120, message: "Please retry a wait moment" });
-    const item = await AppDS.manager.findOne(tables.index_block_time, { where: { time: MoreThanOrEqual(timestamp) } })
-    if(!item) return res.status(500).json({ code: 120, message: "Please retry a wait moment" });
-    await queryPointsByBlock(req, res, bvault, item.block);
-  } catch (error) {
-    return res.status(500).json({ code: 120, message: "Please retry a wait moment" })
-  }
 });

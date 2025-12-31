@@ -1,3 +1,4 @@
+import { now } from "lodash";
 import { formatUnits, parseUnits } from "viem";
 
 export const DECIMAL = 10n ** 18n;
@@ -128,4 +129,13 @@ export function bnLog(bn: bigint, decimal: number = 18) {
 }
 export function bnPow(bn: bigint, p: number, decimal: number = 18) {
   return numToBn(Math.pow(bnToNumber(bn, decimal), p), decimal);
+}
+
+const cacheMap = new Map<string, { getPromise: Promise<any>; time: number }>();
+export async function cacheGet<T = unknown>(key: string, getFn: () => Promise<T>, dur: number) {
+  const cache = cacheMap.get(key);
+  if (!cache || now() - cache.time > dur) {
+    cacheMap.set(key, { time: now(), getPromise: getFn() });
+  }
+  return cacheMap.get(key)!.getPromise as Promise<T>;
 }

@@ -1,5 +1,5 @@
 import { AppDS, event_bvault_deposit, index_bvault_epoch_pt_syntheticV2, index_event, tables } from "@/db";
-import { getIndexConfig, upIndexConfig } from "@/db/help";
+import { cacheGetTimeByBlock, getIndexConfig, upIndexConfig } from "@/db/help";
 import { bigintMin, loopRun, toMap } from "@/lib/utils";
 import _ from "lodash";
 import { Raw } from "typeorm";
@@ -11,15 +11,14 @@ import abiBVault from "@/configs/abiBVault";
 import { story } from "@/configs/network";
 
 async function indexBvaultEpochPtSynthetic(name: string, ie: index_event, isV2?: boolean) {
-  const params = await getIndexEventParams(story.id, name, 12000n, ie.start);
+  const params = await getIndexEventParams(ie.chain ?? story.id, name, 12000n, ie.start);
   if (!params) return;
   const indexDepositBlock = await getIndexConfig(indexEventName(ie), 1n);
-  const indexTimeBlock = await getIndexConfig("index_block_time", 1n);
   const indexEpochStartBlock = await getIndexConfig(
     indexEventName({ table: isV2 ? "event_bvault_epoch_started_v2" : "event_bvault_epoch_started", address: ie.address } as any),
     1n
   );
-  params.end = bigintMin([indexDepositBlock, indexTimeBlock, indexEpochStartBlock, params.end]);
+  params.end = bigintMin([indexDepositBlock, indexEpochStartBlock, params.end]);
   if (params.start >= params.end) return;
   const ebds = await AppDS.manager.find(tables.event_bvault_deposit, {
     where: {
@@ -44,7 +43,7 @@ async function indexBvaultEpochPtSynthetic(name: string, ie: index_event, isV2?:
     }))!;
     console.info("epoch:", epoch);
     const getStartPTSynthetic = async () => {
-      const pc = getPC(story.id, 1);
+      const pc = getPC(ie.chain ?? story.id, 1);
       const pToken = await pc.readContract({ abi: abiBVault, address: epoch.address, functionName: "pToken" });
       const startPTokenAmount = await pc.readContract({ abi: erc20Abi, address: pToken, functionName: "totalSupply", blockNumber: epoch.block });
       return startPTokenAmount * epoch.duration;
@@ -56,8 +55,8 @@ async function indexBvaultEpochPtSynthetic(name: string, ie: index_event, isV2?:
     }
     for (const item of groups[epochId]) {
       if (item.block == epoch.block) continue;
-      const ibt = (await AppDS.manager.findOne(tables.index_block_time, { where: { block: item.block } }))!;
-      sum += item.pTokenAmount * (epoch.startTime + epoch.duration - BigInt(ibt.time));
+      const ibtTime = await cacheGetTimeByBlock(ie.chain ?? story.id, item.block);
+      sum += item.pTokenAmount * (epoch.startTime + epoch.duration - BigInt(ibtTime));
     }
     datas.push({ bvault: ie.address, epochId: BigInt(epochId), value: sum });
   }

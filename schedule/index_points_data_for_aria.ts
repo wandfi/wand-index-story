@@ -3,9 +3,9 @@ import { BVAULT2_CONFIGS, type Bvault2Config } from "@/configs/bvaults2";
 import { codeBvualt2Query } from "@/configs/codes";
 import { INDEX_EVENTV2_CONFIGS } from "@/configs/indexEventsV2";
 import { AppDS, tables } from "@/db";
-import { getBlockByTime, getBlockTimeBy, getIndexConfig, getIndexedBlock } from "@/db/help";
+import { cacheGetBlocks1Hour, cacheGetTimeByBlock, getIndexConfig } from "@/db/help";
 import { getPC } from "@/lib/publicClient";
-import { bigintMin, loopRun, promiseAll, toUtc0000UnixTime } from "@/lib/utils";
+import { bigintMin, loopRun, promiseAll } from "@/lib/utils";
 import { uniqBy } from "lodash";
 import { erc20Abi, formatUnits, isAddressEqual, zeroAddress, type Address, type PublicClient } from "viem";
 import { story } from "viem/chains";
@@ -15,18 +15,18 @@ export const ariaVaultBT = "0x3bb7dc96832f8f98b8aa2e9f2cc88a111f96a118" as Addre
 export const ariaBTStart = 6745320n;
 // next day time
 async function nextTime() {
-  const last = await AppDS.getRepository(tables.points_data_for_aria).createQueryBuilder().select("MAX(time)", "time").getRawOne<{ time: string }>();
-  if (!last || !last.time) {
-    let time = await getBlockTimeBy(story.id, ariaBTStart + 1n);
+  const count = await AppDS.getRepository(tables.points_data_for_aria).count();
+  if (count == 0) {
+    let time = await cacheGetTimeByBlock(story.id, ariaBTStart + 1n);
     console.info("nextTime:", ariaBTStart + 1n, time);
     if (!time) return undefined;
-    time = toUtc0000UnixTime(time);
     return { block: ariaBTStart + 1n, time: time };
   }
-  const time = toUtc0000UnixTime(Math.round(new Date(last.time).getTime() / 1000 + 25 * 60 * 60));
-  const block = await getBlockByTime(story.id, time);
-  console.info("nextTime:", last.time, block, time);
-  if (!block) return undefined;
+  const block = BigInt(count) * (await cacheGetBlocks1Hour(story.id)) + ariaBTStart + 1n;
+  const latestBlock = await getPC(story.id).getBlockNumber({ cacheTime: 23 * 3600 * 1000 });
+  if (block > latestBlock) return undefined;
+  const time = await cacheGetTimeByBlock(story.id, block);
+  console.info("nextTime:", block, time);
   return { block, time };
 }
 
@@ -55,7 +55,7 @@ async function getUserPoint(
   // bt to point (1:1 bt:point)
   let point = btBalance;
   for (const vc of vcs) {
-    if(blockNumber < vc.start) continue;
+    if (blockNumber < vc.start) continue;
     const { hookBalance, epochCount, hookTotal, hookBT_PT } = await promiseAll({
       hookBalance: pc.readContract({ abi: erc20Abi, address: vc.hook, functionName: "balanceOf", args: [user], blockNumber }),
       hookTotal: pc.readContract({ abi: erc20Abi, address: vc.hook, functionName: "totalSupply", blockNumber }),
@@ -102,7 +102,7 @@ async function updatePointData(vcs: Bvault2Config[], nt: { block: bigint; time: 
 
 async function getMinIndexedBlock() {
   const ie2cs = INDEX_EVENTV2_CONFIGS.filter((item) => isAddressEqual(item.address, ariaVaultBT));
-  const blocks = await Promise.all([getIndexedBlock(story.id), ...ie2cs.map((ie) => getIndexConfig(indexEventV2Name(ie)))]);
+  const blocks = await Promise.all([...ie2cs.map((ie) => getIndexConfig(indexEventV2Name(ie)))]);
   return bigintMin(blocks);
 }
 

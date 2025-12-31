@@ -1,6 +1,6 @@
 import type { Address, Chain } from "viem";
 import { defineChain } from "viem";
-import { arbitrum as arbitrumMain, story as storyMain } from "viem/chains";
+import { arbitrum as arbitrumMain, story as storyMain, monad as _monad } from "viem/chains";
 export const storyTestnet = defineChain({
   id: 1315,
   name: "Story Aeneid Testnet",
@@ -87,11 +87,21 @@ export const arbitrum = defineChain({
     },
   },
 });
+
+export const monad = defineChain({
+  ..._monad,
+  rpcUrls: {
+    ..._monad.rpcUrls,
+    alchemy: {
+      http: ["https://monad-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX"],
+    },
+  },
+});
 export const apiBatchConfig = { batchSize: 30, wait: 1500 };
 export const multicallBatchConfig = { batchSize: 100, wait: 1000 };
 
 export const storyChains = [storyTestnet, story];
-export const SUPPORT_CHAINS: readonly [Chain, ...Chain[]] = [sepolia, ...storyChains, arbitrum].filter(
+export const SUPPORT_CHAINS: readonly [Chain, ...Chain[]] = [sepolia, ...storyChains, arbitrum, monad].filter(
   (item) =>
     // isPROD ? !item.testnet : true,
     true

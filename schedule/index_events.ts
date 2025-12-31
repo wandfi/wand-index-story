@@ -13,7 +13,6 @@ export function indexEventName(ec: index_event) {
 }
 async function fetchEvent(ec: index_event) {
   // console.info('ec:', ec)
-  const isLnt = ec.table.includes("lntvault") || ec.table === "event_erc721_transfer";
   const indexCurrentName = indexEventName(ec);
   const params = await getIndexEventParams(story.id, indexCurrentName, 10000n, ec.start);
   const table = tables[ec.table];

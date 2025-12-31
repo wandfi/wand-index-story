@@ -41,6 +41,9 @@ export class index_event {
 
   @Column({ type: "decimal", precision: 64, transformer: bnTrans })
   declare start: bigint;
+
+  @Column({ type: "integer", nullable: true })
+  declare chain?: number;
 }
 // ************************************************** index_block_time *****************************************************
 @Entity()
@@ -424,13 +427,13 @@ export class bvault2_charts {
   @Column({ type: "timestamp", transformer: timeNumTrans })
   declare time: number;
 
-  @Column({ type: "decimal", precision: 64, transformer: bnTrans})
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
   declare ytRoi: bigint;
-  @Column({ type: "decimal", precision: 64, transformer: bnTrans})
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
   declare ytPrice: bigint;
-  @Column({ type: "decimal", precision: 64, transformer: bnTrans})
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
   declare ptApy: bigint;
-  @Column({ type: "decimal", precision: 64, transformer: bnTrans})
+  @Column({ type: "decimal", precision: 64, transformer: bnTrans })
   declare ptPrice: bigint;
 }
 
