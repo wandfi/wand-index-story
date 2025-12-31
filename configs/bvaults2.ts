@@ -11,6 +11,7 @@ export type Bvault2Config = {
   hook: Address;
   start: bigint;
   decimals: number;
+  chunk?: bigint;
   btPriceUsd: (time: number) => Promise<bigint>;
   underlingApy: (time: number) => Promise<bigint>;
 };
@@ -23,6 +24,7 @@ export const ariaVC1: Bvault2Config = {
   hook: "0x110477af9ac7837fd0e8a1b917982fd6065eba88",
   start: 6745320n,
   decimals: 18,
+  chunk: 10000n,
   btPriceUsd: async () => DECIMAL,
   underlingApy: async () => BigInt(7e16),
 };
@@ -35,8 +37,10 @@ export const ariaVC2: Bvault2Config = {
   hook: "0x44d1d53433aaa6ab4325f90ee216b18f1ceafa88",
   start: 8142367n,
   decimals: 18,
+  chunk: 10000n,
   btPriceUsd: async () => DECIMAL,
   underlingApy: async () => BigInt(7e16),
+
 };
 
 export const aPrioirVC1: Bvault2Config = {
@@ -47,6 +51,7 @@ export const aPrioirVC1: Bvault2Config = {
   hook: "0x0d9476cb8f26e3fad5361b3952b38c63bde4fa88",
   start: 38079341n,
   decimals: 18,
+  chunk: 1000n,
   btPriceUsd: async () => cacheGet("mon_price", () => getTokenPricesBySymbol("MON"), 3600 * 1000),
   underlingApy: async () => BigInt(4e16),
 };

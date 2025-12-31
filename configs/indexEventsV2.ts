@@ -20,6 +20,7 @@ export const INDEX_EVENTV2_CONFIGS = flatten(
       table: "eventV2_bvault2_LiquidityAdded",
       event: "event LiquidityAdded(address indexed user, address indexed BT, uint256 amountBT, uint256 amountVPT,uint256 amountShares, uint256 amountPT, uint256 amountYT)",
       address: item.market,
+      chunk: item.chunk,
     },
     {
       chain: item.chain,
@@ -27,6 +28,7 @@ export const INDEX_EVENTV2_CONFIGS = flatten(
       table: "eventV2_bvault2_SwapBTforPT",
       event: "event SwapBTforPT(address indexed user, address indexed BT, address indexed PT, uint256 amountBT, uint256 amountPT)",
       address: item.vault,
+      chunk: item.chunk,
     },
     {
       chain: item.chain,
@@ -34,6 +36,7 @@ export const INDEX_EVENTV2_CONFIGS = flatten(
       table: "eventV2_bvault2_SwapBTforYT",
       event: "event SwapBTforYT(address indexed user, address indexed BT, address indexed YT, uint256 maxAmountBT, uint256 amountYT, uint256 amountBTUsed)",
       address: item.vault,
+      chunk: item.chunk,
     },
     {
       chain: item.chain,
@@ -41,6 +44,7 @@ export const INDEX_EVENTV2_CONFIGS = flatten(
       table: "eventV2_bvault2_MintPTandYT",
       event: "event MintPTandYT(address indexed user, address indexed BT, address PT, address YT, uint256 amount)",
       address: item.vault,
+      chunk: item.chunk,
     },
   ])
 ).concat([
@@ -50,7 +54,7 @@ export const INDEX_EVENTV2_CONFIGS = flatten(
     event: "event Transfer(address indexed from, address indexed to, uint256 value)",
     address: ariaVC1.bt,
     start: ariaVC1.start,
-    chunk: 10000n,
+    chunk: ariaVC1.chunk,
   },
   {
     chain: aPrioirVC1.chain,
@@ -58,6 +62,6 @@ export const INDEX_EVENTV2_CONFIGS = flatten(
     event: "event Transfer(address indexed from, address indexed to, uint256 value)",
     address: aPrioirVC1.bt,
     start: aPrioirVC1.start,
-    chunk: 10000n,
+    chunk: aPrioirVC1.chunk,
   },
 ]);
