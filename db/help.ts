@@ -1,9 +1,9 @@
-import { sepolia, story, SUPPORT_CHAINS } from "@/configs/network";
+import { story } from "@/configs/network";
+import { getPCBy } from "@/lib/publicClient";
 import { cacheGet, createRunWithPool } from "@/lib/utils";
-import { MoreThanOrEqual, type EntityManager } from "typeorm";
+import { type EntityManager } from "typeorm";
 import { AppDS } from "./ds";
 import { index_config, tables } from "./tables";
-import { getPCBy } from "@/lib/publicClient";
 
 export async function getIndexConfig(name: string, def = 0n) {
   const ic = await AppDS.manager.findOne(index_config, { where: { name }, select: ["vaule"] });

@@ -35,5 +35,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/wandfi/wand-index-story:latest
-            ghcr.io/wandfi/wand-index-story:${{ env.date }}             
+            ghcr.io/wandfi/wand-index:latest
+            ghcr.io/wandfi/wand-index:${{ env.date }}             

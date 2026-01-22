@@ -1,5 +1,5 @@
 import { createPublicClient, http } from "viem";
-import { arbitrum, base, berachain, bsc, sei, story } from "viem/chains";
+import { story } from "viem/chains";
 
 const chains = [story];
 

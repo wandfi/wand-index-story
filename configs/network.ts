@@ -1,128 +1,58 @@
-import type { Address, Chain } from "viem";
-import { defineChain } from "viem";
-import { arbitrum as arbitrumMain, story as storyMain, monad as _monad } from "viem/chains";
-export const storyTestnet = defineChain({
-  id: 1315,
-  name: "Story Aeneid Testnet",
-  nativeCurrency: {
-    decimals: 18,
-    name: "IP",
-    symbol: "IP",
-  },
-  rpcUrls: {
-    default: { http: ["https://aeneid.storyrpc.io"] },
-  },
-  blockExplorers: {
-    default: {
-      name: "Blockscout",
-      url: "https://aeneid.storyscan.xyz",
-    },
-  },
-  contracts: {
-    multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11", blockCreated: 1792 },
-  },
-  testnet: true,
-  fees: {
-    baseFeeMultiplier: 1.4,
-  },
-});
-export const story = defineChain({
-  ...storyMain,
-  rpcUrls: {
-    ...storyMain.rpcUrls,
-    alchemy: {
-      http: ["https://story-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Blockscout",
-      url: "https://storyscan.xyz",
-    },
-  },
-  contracts: {
-    multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11", blockCreated: 340998 },
-  },
-  testnet: false,
-  fees: {
-    baseFeeMultiplier: 1.4,
-  },
-});
+import { defineChain, type Assign, type Chain, type ChainFormatters, type Prettify } from 'viem'
+import { arbitrum as _arbitrum, base as _base, berachain as _berachain, bsc as _bsc, monad as _monad, sei as _sei, story as _story } from 'viem/chains'
 
-export const sepolia = defineChain({
-  id: 11_155_111,
-  name: "Sepolia",
-  nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: {
-    default: {
-      http: ["https://eth-sepolia.public.blastapi.io", "https://eth-sepolia.g.alchemy.com/v2/WddzdzI2o9S3COdT73d5w6AIogbKq4X-"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Etherscan",
-      url: "https://sepolia.etherscan.io",
-      apiUrl: "https://api-sepolia.etherscan.io/api",
-    },
-  },
-  contracts: {
-    multicall3: {
-      address: "0xca11bde05977b3631167028862be2a173976ca11",
-      blockCreated: 751532,
-    },
-    ensRegistry: { address: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e" },
-    ensUniversalResolver: {
-      address: "0xc8Af999e38273D658BE1b921b88A9Ddf005769cC",
-      blockCreated: 5_317_080,
-    },
-  },
-  testnet: true,
-});
-export const arbitrum = defineChain({
-  ...arbitrumMain,
-  rpcUrls: {
-    ...arbitrumMain.rpcUrls,
-    alchemy: {
-      http: ["https://arb-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX"],
-    },
-  },
-});
+function mconfigChain<
+  formatters extends ChainFormatters,
+  const chain extends Chain<formatters>
+>(chain: chain): Prettify<Assign<Chain<undefined>, chain>> {
+  const rpcUrls: Chain<formatters>['rpcUrls'] = {
+    ...chain.rpcUrls
+  }
+  const ALCHEMY_API_KEY = process.env['ALCHEMY_API_KEY']
+  if (ALCHEMY_API_KEY) {
+    const subdommainmap: { [k: number]: string } = {
+      [_sei.id]: 'sei-mainnet',
+      [_story.id]: 'story-mainnet',
+      [_arbitrum.id]: 'arb-mainnet',
+      [_base.id]: 'base-mainnet',
+      [_bsc.id]: 'bnb-mainnet',
+      [_berachain.id]: 'berachain-mainnet',
+      [_monad.id]: 'monad-mainnet',
+    }
+    if (subdommainmap[chain.id]) {
+      rpcUrls['alchemy'] = {
+        http: [`https://${subdommainmap[chain.id]}.g.alchemy.com/v2/${ALCHEMY_API_KEY}`]
+      }
+    }
+  }
+  const ANKR_API_KEY = process.env['ANKR_API_KEY']
+  if (ANKR_API_KEY) {
+    const netmap: { [k: number]: string } = {
+      [_sei.id]: 'sei-evm',
+      [_story.id]: 'story-mainnet',
+      [_arbitrum.id]: 'arbitrum',
+      [_base.id]: 'base',
+      [_bsc.id]: 'bsc',
+      [_monad.id]: 'monad-mainnet',
+      [16661]: '0g_mainnet_evm',
+    }
+    if (netmap[chain.id]) {
+      rpcUrls['ankr'] = {
+        http: [`https://rpc.ankr.com/${netmap[chain.id]}/${ANKR_API_KEY}`]
+      }
+    }
+  }
+  return defineChain({
+    ...chain,
+    rpcUrls,
+  }) as unknown as Assign<Chain<undefined>, chain>
+}
 
-export const monad = defineChain({
-  ..._monad,
-  rpcUrls: {
-    ..._monad.rpcUrls,
-    alchemy: {
-      http: ["https://monad-mainnet.g.alchemy.com/v2/7UXJgo01vxWHLJDk09Y0qZct8Y3zMDbX"],
-    },
-  },
-});
+export const story = mconfigChain(_story);
+export const arbitrum = mconfigChain(_arbitrum);
+export const monad = mconfigChain(_monad);
+
 export const apiBatchConfig = { batchSize: 30, wait: 1500 };
 export const multicallBatchConfig = { batchSize: 100, wait: 1000 };
 
-export const storyChains = [storyTestnet, story];
-export const SUPPORT_CHAINS: readonly [Chain, ...Chain[]] = [sepolia, ...storyChains, arbitrum, monad].filter(
-  (item) =>
-    // isPROD ? !item.testnet : true,
-    true
-) as any;
-
-export const refChainId: { id: number } = { id: story.id };
-export const getCurrentChainId = () => {
-  return refChainId.id;
-};
-
-export const setCurrentChainId = (id: number) => {
-  if (SUPPORT_CHAINS.find((item) => item.id == id)) refChainId.id = id;
-};
-
-export function isBerachain() {
-  return !!storyChains.find((item) => item.id == getCurrentChainId());
-}
-
-export const BEX_URLS: { [k: number]: string } = {
-  [storyTestnet.id]: "https://bartio.bex.berachain.com",
-};
-export const getBexPoolURL = (pool: Address) => `${BEX_URLS[getCurrentChainId()]}/pool/${pool}`;
-
-export const iBGT: Address = "0xac03CABA51e17c86c921E1f6CBFBdC91F8BB2E6b";
+export const SUPPORT_CHAINS: readonly [Chain, ...Chain[]] = [arbitrum, monad, story];

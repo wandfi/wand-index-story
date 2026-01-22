@@ -1,5 +1,5 @@
 import { BVAULT2_CONFIGS } from "@/configs/bvaults2";
-import { getPC, getPCBy } from "@/lib/publicClient";
+import { getPCBy } from "@/lib/publicClient";
 import { parseAbi } from "viem";
 
 for (const vc of BVAULT2_CONFIGS) {
@@ -10,4 +10,4 @@ for (const vc of BVAULT2_CONFIGS) {
   });
   console.info(vc.vault, "market:", market);
 }
-export {};
+export { };
