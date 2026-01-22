@@ -1,4 +1,4 @@
-# wand-index-story
+# wand-index
 
 To install dependencies:
 
