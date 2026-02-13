@@ -3,8 +3,8 @@ import { story } from "@/configs/network";
 import { AppDS, index_event, tables } from "@/db";
 import { upIndexConfig } from "@/db/help";
 import { getPC } from "@/lib/publicClient";
-import { loopRun, toMap } from "@/lib/utils";
-import _ from "lodash";
+import { loopRun } from "@/lib/utils";
+import _, { groupBy, keys } from "lodash";
 import { isAddressEqual, parseAbiItem, parseEventLogs, type AbiEvent } from "viem";
 import { getIndexEventParams } from "./utils";
 
@@ -49,47 +49,21 @@ async function fetchEvent(ec: index_event) {
 }
 
 export default function indexEvents() {
-  // for table groups
-  const map: { [k: string]: index_event[] } = {};
   // addTo map
-  loopRun(`update_map_by_index_event`, async () => {
+  loopRun(`index_events`, async () => {
     const event_configs = await AppDS.manager.find(index_event);
-    const event_configs_map = toMap(event_configs || [], "id");
-    // remove olds
-    _.keys(map).forEach((key) => {
-      map[key] = (map[key] || []).filter((e) => !!event_configs_map[e.id]);
-    });
-
-    // add news
-    event_configs.forEach((e) => {
-      if (!map[e.table]) {
-        map[e.table] = [e];
-      } else {
-        const find = map[e.table].find((item) => item.id == e.id);
-        if (!find) {
-          map[e.table] = [...map[e.table], e];
-        }
-      }
-    });
-  });
-  // loop task map
-  const tasks: { [k: string]: AbortController } = {};
-  loopRun(`start_index_task_for_map`, async () => {
-    for (const table of _.keys(map)) {
-      const ac = tasks[table];
-      if (!ac || ac.signal.aborted) {
-        // start task
-        tasks[table] = loopRun(`fetchEvent_${table}`, async () => {
-          const configs = _.shuffle(map[table] || []);
-          for (const conf of configs) {
-            await fetchEvent(conf);
-          }
-        });
-      } else if (_.isEmpty(map[table])) {
-        // cancel task
-        ac.abort();
-        delete tasks[table];
-      }
+    const groups = groupBy(event_configs, ec => ec.table)
+    for (const table of keys(groups)) {
+      runIndexEvents(groups[table] || []).catch((e) => {
+        console.error(`index_events_for_${table}`, e.message)
+      });
     }
   });
 }
+async function runIndexEvents(ies: index_event[]) {
+  const configs = _.shuffle(ies);
+  for (const conf of configs) {
+    await fetchEvent(conf);
+  }
+}
+

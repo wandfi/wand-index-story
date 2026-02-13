@@ -44,22 +44,12 @@ async function fetchEvent(ec: IndexEventV2Config) {
 export default function indexEventsV2() {
   // for table groups
   const map = groupBy(INDEX_EVENTV2_CONFIGS, (ec) => ec.table);
-  // loop task map
-  const tasks: { [k: string]: AbortController } = {};
   for (const table of _.keys(map)) {
-    const ac = tasks[table];
-    if (!ac || ac.signal.aborted) {
-      // start task
-      tasks[table] = loopRun(`fetchEventV2_${table}`, async () => {
-        const configs = _.shuffle(map[table] || []);
-        for (const conf of configs) {
-          await fetchEvent(conf);
-        }
-      });
-    } else if (_.isEmpty(map[table])) {
-      // cancel task
-      ac.abort();
-      delete tasks[table];
-    }
+    loopRun(`fetchEventV2_${table}`, async () => {
+      const configs = _.shuffle(map[table] || []);
+      for (const conf of configs) {
+        await fetchEvent(conf);
+      }
+    }, 10000);
   }
 }

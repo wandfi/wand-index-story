@@ -3,7 +3,7 @@ import { story } from "@/configs/network";
 import { AppDS, event_bvault_epoch_started_v2, index_bvault_epoch_yt_price, index_event, tables } from "@/db";
 import { cacheGetBlocks1Hour, cacheGetTimeByBlock, getIndexConfig, upIndexConfig } from "@/db/help";
 import { getPC } from "@/lib/publicClient";
-import { bigintMax, bigintMin, DECIMAL, loopRun, toMap } from "@/lib/utils";
+import { bigintMax, bigintMin, DECIMAL, loopRun } from "@/lib/utils";
 import _ from "lodash";
 import { LessThanOrEqual, Raw } from "typeorm";
 import type { Address, ContractFunctionExecutionError, PublicClient } from "viem";
@@ -91,23 +91,13 @@ async function indexBvaultEpochYTPrice(name: string, ie: index_event) {
   }
 }
 export default function indexBvaultSEpochYTprice() {
-  const map: { [k: Address]: AbortController } = {};
   loopRun("start indexBvaultEpochYTprice for index event", async () => {
     const ies = (await AppDS.manager.find(tables.index_event, { where: { table: "event_bvault_epoch_started_v2" } })) || [];
-    // removed olds
-    const iesmap = toMap(ies, "address");
-    _.keys(map).forEach((key) => {
-      if (!iesmap[key]) {
-        map[key].abort();
-        delete map[key];
-      }
-    });
-
     for (const ie of ies) {
-      if (!map[ie.address] || map[ie.address].signal.aborted) {
-        const ieTaskName = `index_bvault_epoch_yt_price_${ie.address}`;
-        map[ie.address] = loopRun(ieTaskName, () => indexBvaultEpochYTPrice(ieTaskName, ie));
-      }
+      const ieTaskName = `index_bvault_epoch_yt_price_${ie.address}`;
+      indexBvaultEpochYTPrice(ieTaskName, ie).catch(e => {
+        console.error(ieTaskName, e.message)
+      })
     }
   });
 }

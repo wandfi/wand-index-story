@@ -3,7 +3,7 @@ import indexBvaultSEpochPtSynthetic from "./index_bvault_epoch_pt_synthetic";
 import indexBvaultSEpochYTpriceV2 from "./index_bvault_epoch_yt_price_v2";
 import indexEvents from "./index_events";
 import indexEventsV2 from "./index_events_v2";
-import indexPointsData from "./index_points_data_for_aria";
+// import indexPointsData from "./index_points_data_for_aria";
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
@@ -14,7 +14,7 @@ export async function startSchedules() {
   indexBvaultSEpochPtSynthetic();
 
   indexEventsV2();
-  indexPointsData();
+  // indexPointsData();
   
   indexBvault2Charts();
 }

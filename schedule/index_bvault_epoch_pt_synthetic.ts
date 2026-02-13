@@ -66,25 +66,16 @@ async function indexBvaultEpochPtSynthetic(name: string, ie: index_event, isV2?:
   });
 }
 export default function indexBvaultSEpochPtSynthetic() {
-  const map: { [k: Address]: AbortController } = {};
-  loopRun("start indexBvaultSEpochPtSynthetic for index event", async () => {
+
+  loopRun("indexBvaultSEpochPtSynthetic", async () => {
     const ies = (await AppDS.manager.find(tables.index_event, { where: { table: "event_bvault_deposit" } })) || [];
-    // removed olds
-    const iesmap = toMap(ies, "address");
-    _.keys(map).forEach((key) => {
-      if (!iesmap[key]) {
-        console.info("indexBvaultSEpochPtSynthetic", "stop removed task for:", key);
-        map[key].abort();
-        delete map[key];
-      }
-    });
     for (const ie of ies) {
-      if (!map[ie.address] || map[ie.address].signal.aborted) {
-        console.info("indexBvaultSEpochPtSynthetic", "start task for:", ie.address);
-        const v2IndexEvent = await AppDS.manager.findOne(tables.index_event, { where: { table: "event_bvault_epoch_started_v2", address: ie.address } });
-        const ieTaskName = `index_bvault_epoch_pt_syntheticV2_${ie.address}`;
-        map[ie.address] = loopRun(ieTaskName, () => indexBvaultEpochPtSynthetic(ieTaskName, ie, Boolean(v2IndexEvent)));
-      }
+      const v2IndexEvent = await AppDS.manager.findOne(tables.index_event, { where: { table: "event_bvault_epoch_started_v2", address: ie.address } });
+      const ieTaskName = `index_bvault_epoch_pt_syntheticV2_${ie.address}`;
+      indexBvaultEpochPtSynthetic(ieTaskName, ie, Boolean(v2IndexEvent)).catch(e => {
+        console.error(ieTaskName, e.message)
+      })
     }
   });
 }
+
