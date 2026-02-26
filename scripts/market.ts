@@ -3,7 +3,7 @@ import { getPCBy } from "@/lib/publicClient";
 import { parseAbi } from "viem";
 
 for (const vc of BVAULT2_CONFIGS) {
-  const market = await getPCBy({ chain: vc.chain, name: "alchemy" }).readContract({
+  const market = await getPCBy({ chain: vc.chain }).readContract({
     abi: parseAbi(["function market() external view returns (address)"]),
     address: vc.vault,
     functionName: "market",

@@ -8,38 +8,10 @@ function mconfigChain<
   const rpcUrls: Chain<formatters>['rpcUrls'] = {
     ...chain.rpcUrls
   }
-  const ALCHEMY_API_KEY = process.env['ALCHEMY_API_KEY']
-  if (ALCHEMY_API_KEY) {
-    const subdommainmap: { [k: number]: string } = {
-      [_sei.id]: 'sei-mainnet',
-      [_story.id]: 'story-mainnet',
-      [_arbitrum.id]: 'arb-mainnet',
-      [_base.id]: 'base-mainnet',
-      [_bsc.id]: 'bnb-mainnet',
-      [_berachain.id]: 'berachain-mainnet',
-      [_monad.id]: 'monad-mainnet',
-    }
-    if (subdommainmap[chain.id]) {
-      rpcUrls['alchemy'] = {
-        http: [`https://${subdommainmap[chain.id]}.g.alchemy.com/v2/${ALCHEMY_API_KEY}`]
-      }
-    }
-  }
-  const ANKR_API_KEY = process.env['ANKR_API_KEY']
-  if (ANKR_API_KEY) {
-    const netmap: { [k: number]: string } = {
-      [_sei.id]: 'sei-evm',
-      [_story.id]: 'story-mainnet',
-      [_arbitrum.id]: 'arbitrum',
-      [_base.id]: 'base',
-      [_bsc.id]: 'bsc',
-      [_monad.id]: 'monad-mainnet',
-      [16661]: '0g_mainnet_evm',
-    }
-    if (netmap[chain.id]) {
-      rpcUrls['ankr'] = {
-        http: [`https://rpc.ankr.com/${netmap[chain.id]}/${ANKR_API_KEY}`]
-      }
+  const urls = process.env?.[`RPC_URL_${chain.id}`]?.split(',')
+  if (urls) {
+    rpcUrls['custom'] = {
+      http: urls,
     }
   }
   return defineChain({
@@ -48,7 +20,7 @@ function mconfigChain<
   }) as unknown as Assign<Chain<undefined>, chain>
 }
 
-export const story = mconfigChain(_story);
+export const story = mconfigChain({ ..._story, rpcUrls: { default: { http: ['https://mainnet.storyrpc.io'] } } });
 export const arbitrum = mconfigChain(_arbitrum);
 export const monad = mconfigChain(_monad);
 
